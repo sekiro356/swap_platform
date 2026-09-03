@@ -1,1348 +1,1000 @@
-# 物换物平台（Swap Platform）项目上下文
+# 物换物平台（swap_platform）项目上下文
 
-## 1. 项目简介
+## 一、项目简介
 
-这是一个基于 **FastAPI + MySQL + JWT + LangChain/LangGraph** 开发的 AI 物换物平台。
+项目名称：`swap_platform`
 
-项目目标：
+项目目标：开发一个完整的“以物换物平台”后端项目，并逐步加入数据分析、机器学习、NLP/LLM、LangChain/LangGraph、Redis、RabbitMQ、Docker、Linux、Nginx 等技术。
 
-1. 实现一个可以实际运行的物换物平台 MVP。
-2. 完成用户注册、登录、JWT 身份认证。
-3. 实现用户发布、查询、管理自己的物品。
-4. 实现用户之间的换物请求。
-5. 后期加入 AI 能力：
-   - LLM 结构化提取
-   - Embedding
-   - 向量检索
-   - 智能物品匹配
-   - LangChain
-   - LangGraph
-6. 最终形成一个可以用于：
-   - 项目展示
-   - GitHub
-   - 简历
-   - 面试讲解
-     的完整项目。
+项目定位：
+
+> 从基础 FastAPI CRUD 项目逐步升级为具备真实业务逻辑、权限控制、数据分析、机器学习和 AI 能力的综合项目。
+
+最终用于：
+
+- 项目实践
+- 技术学习
+- GitHub 展示
+- 简历项目
+- 面试项目介绍
 
 ------
 
-# 2. 技术栈
+# 二、当前技术栈
 
-## 后端
+## 后端基础
 
 - Python
 - FastAPI
 - Uvicorn
+- Pydantic
 - SQLAlchemy
 - MySQL
-- PyMySQL
-- Pydantic
 
 ## 用户认证
 
 - bcrypt
+- JWT
 - PyJWT
 - HTTPBearer
-- `.env`
 
-## 后续 AI
+## 后续计划
 
-- LangChain
-- LangGraph
+- Redis
+- RabbitMQ
+- NumPy
+- Pandas
+- Matplotlib
+- Seaborn
+- scikit-learn
+- KNN
+- XGBoost
+- NLP
 - Embedding
 - 向量数据库 / pgvector
-- LLM
-
-## 前端
-
-目前暂时以 FastAPI Swagger 为主要测试方式。
-
-后续再开发：
-
-- HTML
-- CSS
-- JavaScript
+- LangChain
+- LangGraph
+- Docker
+- Linux
+- Nginx
 
 ------
 
-# 3. 项目结构
-
-当前项目结构：
+# 三、当前项目结构
 
 ```text
 swap_platform/
-│
 ├── .gitignore
 ├── requirements.txt
-├── PROJECT_CONTEXT.md
-│
+├── requirements_full.txt
 ├── backend/
 │   ├── main.py
 │   ├── database.py
 │   ├── models.py
 │   ├── schemas.py
 │   ├── auth.py
-│   │
 │   └── routers/
 │       ├── users.py
 │       ├── items.py
 │       └── swaps.py
-│
-└── frontend/
+├── frontend/
+└── PROJECT_CONTEXT.md
 ```
 
-目前核心功能主要暂时写在：
+目前主要业务代码仍然集中在 `backend/main.py` 中。
 
-```text
-backend/main.py
-```
-
-后续随着项目变大，再逐渐拆分到 `routers/` 中。
+后续项目变大后，再逐步将业务拆到 `routers/`。
 
 ------
 
-# 4. 当前项目完成情况
+# 四、数据库
 
-截至 2026-09-03，目前已经完成：
+当前使用：
 
--  FastAPI 项目创建
--  MySQL 数据库连接
--  SQLAlchemy 配置
--  User 数据表
--  用户注册
--  bcrypt 密码加密
--  用户登录
--  JWT Token 生成
--  JWT Token 验证
--  HTTPBearer
--  FastAPI Depends 依赖注入
--  `/me` 获取当前登录用户
--  Swagger 中使用 JWT 测试接口
+- MySQL
+- SQLAlchemy ORM
 
-目前正在进入：
+数据库连接通过 `.env` 中的 `DATABASE_URL` 配置。
 
--  物品模块
--  发布物品
--  查询物品
--  物品详情
--  修改/删除物品
-
-------
-
-# 5. 数据库配置
-
-`backend/database.py`：
+`database.py` 负责：
 
 ```python
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-engine = create_engine(
-    DATABASE_URL,
-    echo=True
-)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-Base = declarative_base()
+engine
+SessionLocal
+Base
 ```
 
-数据库连接信息放在 `.env` 中。
-
-例如：
-
-```text
-DATABASE_URL=mysql+pymysql://用户名:密码@localhost/数据库名
-```
-
-实际密码不要写入 GitHub。
-
-------
-
-# 6. 环境变量
-
-项目使用 `.env` 保存敏感信息。
-
-例如：
-
-```text
-DATABASE_URL=...
-SECRET_KEY=...
-```
-
-`.env` 必须加入：
-
-```text
-.gitignore
-```
-
-不能上传到 GitHub。
-
-------
-
-# 7. User 数据模型
-
-当前 `backend/models.py`：
+并通过：
 
 ```python
-from sqlalchemy import Column, Integer, String
-from database import Base
+Base.metadata.create_all(bind=engine)
+```
 
+启动时自动创建不存在的表。
 
+------
+
+# 五、当前数据库模型
+
+## 1. User 用户表
+
+```python
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = 'users'
 
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
-
-    username = Column(
-        String(50),
-        unique=True,
-        nullable=False
-    )
-
-    password = Column(
-        String(255),
-        nullable=False
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
 ```
 
-当前用户表：
+主要字段：
 
 ```text
-users
------------------------------
 id
 username
 password
 ```
 
+密码数据库中保存的是 bcrypt 哈希，而不是明文密码。
+
 ------
 
-# 8. 用户注册
+## 2. Items 物品表
 
-当前注册接口：
+当前模型名称使用：
+
+```python
+class Items(Base):
+```
+
+表名：
+
+```python
+__tablename__ = 'items'
+```
+
+字段：
+
+```text
+id
+name
+description
+category
+price
+user_id
+```
+
+当前模型：
+
+```python
+class Items(Base):
+    __tablename__ = 'items'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(String(1000), nullable=False)
+    category = Column(String(50), nullable=False)
+    price = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+```
+
+其中：
+
+```text
+user_id = 物品发布者
+```
+
+------
+
+## 3. Swap 交换申请表
+
+当前使用：
+
+```python
+class Swap(Base):
+    __tablename__ = 'swap'
+```
+
+字段：
+
+```text
+id
+requester_id
+target_item_id
+offered_item_id
+status
+```
+
+含义：
+
+```text
+requester_id
+→ 谁发起交换
+
+target_item_id
+→ 想要交换得到的物品
+
+offered_item_id
+→ 发起者拿出来交换的物品
+
+status
+→ 当前交换状态
+```
+
+目前状态：
+
+```text
+pending
+accepted
+rejected
+```
+
+当前默认：
+
+```python
+status = 'pending'
+```
+
+------
+
+# 六、用户认证模块
+
+## 注册
+
+接口：
 
 ```text
 POST /register
 ```
 
-请求：
-
-```json
-{
-    "username": "老王",
-    "password": "666666"
-}
-```
-
-注册流程：
+流程：
 
 ```text
-用户提交用户名和密码
+客户端提交用户名、密码
         ↓
-查询 MySQL
+查询用户名是否存在
         ↓
-判断用户名是否存在
-        ↓
-bcrypt.hashpw()
-        ↓
-密码生成哈希
+bcrypt 加密密码
         ↓
 保存 User
         ↓
-MySQL
-```
-
-核心代码：
-
-```python
-hashed_password = bcrypt.hashpw(
-    user.password.encode("utf8"),
-    bcrypt.gensalt()
-).decode("utf8")
+返回注册成功
 ```
 
 ------
 
-# 9. bcrypt 密码加密
+## 登录
 
-这里使用的是直接调用 `bcrypt`，没有继续使用 Passlib。
-
-原因：
-
-之前使用 Passlib bcrypt 时出现：
-
-```text
-ValueError:
-password cannot be longer than 72 bytes
-```
-
-之后改成直接使用：
-
-```python
-bcrypt.hashpw()
-```
-
-### 密码加密过程
-
-```python
-user.password
-```
-
-是 Python 的：
-
-```text
-str
-```
-
-bcrypt 接收：
-
-```text
-bytes
-```
-
-所以：
-
-```python
-user.password.encode("utf8")
-```
-
-把：
-
-```text
-str
-↓
-bytes
-```
-
-然后：
-
-```python
-bcrypt.gensalt()
-```
-
-生成随机盐。
-
-再：
-
-```python
-bcrypt.hashpw(password, salt)
-```
-
-生成密码哈希。
-
-最后：
-
-```python
-.decode("utf8")
-```
-
-把：
-
-```text
-bytes
-↓
-str
-```
-
-保存到数据库。
-
-------
-
-# 10. 用户登录
-
-当前接口：
+接口：
 
 ```text
 POST /login
 ```
 
-请求：
-
-```json
-{
-    "username": "老王",
-    "password": "666666"
-}
-```
-
-登录流程：
+流程：
 
 ```text
-用户名
-  ↓
-MySQL 查询 User
-  ↓
-找到用户
-  ↓
+用户名 + 密码
+       ↓
+查询用户
+       ↓
 bcrypt.checkpw()
-  ↓
-验证密码
-  ↓
-验证成功
-  ↓
-create_access_token()
-  ↓
-生成 JWT
-  ↓
-返回 Token
-```
-
-密码验证：
-
-```python
-is_password_correct = bcrypt.checkpw(
-    user.password.encode("utf8"),
-    db_user.password.encode("utf8")
-)
-```
-
-`checkpw()` 不是简单的：
-
-```python
-明文密码 == 数据库密码
-```
-
-而是使用 bcrypt 的算法验证：
-
-```text
-用户输入的密码
-        ↓
-bcrypt
-        ↓
-与数据库中的 bcrypt 哈希进行验证
-        ↓
-True / False
-```
-
-------
-
-# 11. JWT
-
-已经安装：
-
-```text
-PyJWT
-```
-
-JWT 相关代码放在：
-
-```text
-backend/auth.py
-```
-
-------
-
-# 12. JWT 配置
-
-当前：
-
-```python
-import jwt
-import os
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-```
-
-SECRET_KEY 放在 `.env`。
-
-不能把真实 SECRET_KEY 上传到 GitHub。
-
-------
-
-# 13. JWT 生成
-
-当前：
-
-```python
-def create_access_token(user_id: int):
-    payload = {
-        "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(hours=2)
-    }
-
-    token = jwt.encode(
-        payload,
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
-
-    return token
-```
-
-JWT 中目前保存：
-
-```text
-user_id
-exp
-```
-
-例如：
-
-```json
-{
-    "user_id": 2,
-    "exp": "过期时间"
-}
-```
-
-生成过程：
-
-```text
-user_id
-   ↓
-payload
-   ↓
-SECRET_KEY + HS256
-   ↓
-JWT Token
-```
-
-------
-
-# 14. JWT 验证
-
-当前：
-
-```python
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    token = credentials.credentials
-
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-
-        user_id = payload.get("user_id")
-
-        if user_id is None:
-            raise HTTPException(
-                status_code=401,
-                detail="Token 无效"
-            )
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=401,
-            detail="Token 已过期"
-        )
-
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Token 无效"
-        )
-
-    db = SessionLocal()
-
-    user = db.query(User).filter(
-        User.id == user_id
-    ).first()
-
-    db.close()
-
-    if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="用户不存在"
-        )
-
-    return user
-```
-
-------
-
-# 15. HTTPBearer
-
-当前：
-
-```python
-from fastapi.security import HTTPBearer
-
-security = HTTPBearer()
-```
-
-作用：
-
-从 HTTP 请求中获取：
-
-```text
-Authorization
-```
-
-例如：
-
-```text
-Authorization: Bearer eyJhbGci...
-```
-
-然后：
-
-```python
-credentials.credentials
-```
-
-得到真正的：
-
-```text
-eyJhbGci...
-```
-
-------
-
-# 16. `/me` 当前登录用户接口
-
-当前接口：
-
-```text
-GET /me
-```
-
-代码：
-
-```python
-@app.get("/me")
-def get_me(
-    current_user: User = Depends(get_current_user)
-):
-    return {
-        "user_id": current_user.id,
-        "username": current_user.username
-    }
-```
-
-这里：
-
-```python
-Depends(get_current_user)
-```
-
-意味着：
-
-```text
-请求 /me
-   ↓
-FastAPI
-   ↓
-执行 get_current_user()
-   ↓
-验证 JWT
-   ↓
-查询数据库
-   ↓
-得到 User 对象
-   ↓
-注入 current_user
-   ↓
-执行 get_me()
-```
-
-------
-
-# 17. JWT 功能已经实际测试成功
-
-2026-09-03 已经通过 Swagger 完成测试。
-
-登录后获得 JWT：
-
-```text
-access_token
-```
-
-Swagger Authorize 时需要注意：
-
-### 正确
-
-只填写：
-
-```text
-eyJhbGciOi...
-```
-
-Swagger 会自动生成：
-
-```text
-Authorization: Bearer eyJhbGciOi...
-```
-
-### 错误
-
-不要自己填写：
-
-```text
-Bearer eyJhbGciOi...
-```
-
-否则可能导致：
-
-```text
-Authorization: Bearer Bearer eyJhbGciOi...
-```
-
-之前就因为这个问题导致：
-
-```text
-401 Unauthorized
-```
-
-------
-
-# 18. `/me` 测试结果
-
-当前已经成功：
-
-```text
-GET /me
+       ↓
+密码正确
+       ↓
+create_access_token(user_id)
+       ↓
+返回 JWT
 ```
 
 返回：
 
 ```json
 {
+    "messages": "登陆成功",
     "user_id": 2,
-    "username": "老王"
+    "user_name": "xxx",
+    "access_token": "xxxxx",
+    "token_type": "bearer"
 }
 ```
 
-HTTP 状态码：
-
-```text
-200 OK
-```
-
-这说明：
-
-```text
-登录
- ↓
-JWT 生成
- ↓
-Swagger 携带 JWT
- ↓
-HTTPBearer
- ↓
-jwt.decode
- ↓
-得到 user_id
- ↓
-MySQL 查询 User
- ↓
-返回当前用户
-```
-
-整个 JWT 认证链路已经跑通。
-
 ------
 
-# 19. 当前 main.py 核心功能
+# 七、JWT 认证
 
-当前 `backend/main.py` 已经包含：
+`auth.py` 使用：
 
 ```python
-from fastapi import FastAPI, Depends
-import uvicorn
-from database import engine, Base, SessionLocal
-from models import User
-from schemas import UserCreate, UserLogin
-import bcrypt
-from auth import create_access_token, get_current_user
-
-
-app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
+HTTPBearer()
 ```
 
-已经存在：
+从请求头获取：
 
 ```text
-GET  /
-GET  /test-db
-POST /register
-POST /login
-GET  /me
+Authorization: Bearer <JWT>
 ```
+
+JWT 中保存：
+
+```python
+{
+    "user_id": user_id,
+    "exp": ...
+}
+```
+
+通过：
+
+```python
+get_current_user()
+```
+
+解析 JWT，并查询数据库中的 User。
+
+因此：
+
+```python
+current_user.id
+```
+
+就是当前登录用户的 ID。
 
 ------
 
-# 20. 当前 API
+# 八、Swagger 鉴权
 
-| 方法   | 接口                   | 功能         | 状态 |
-| ------ | ---------------------- | ------------ | ---- |
-| GET    | `/`                    | 首页测试     | ✅    |
-| GET    | `/test-db`             | 测试 MySQL   | ✅    |
-| POST   | `/register`            | 用户注册     | ✅    |
-| POST   | `/login`               | 用户登录     | ✅    |
-| GET    | `/me`                  | 获取当前用户 | ✅    |
-| POST   | `/items`               | 发布物品     | ⏳    |
-| GET    | `/items`               | 查询物品     | ⏳    |
-| GET    | `/items/{id}`          | 物品详情     | ⏳    |
-| PUT    | `/items/{id}`          | 修改物品     | ⏳    |
-| DELETE | `/items/{id}`          | 删除物品     | ⏳    |
-| POST   | `/swaps`               | 发起换物     | ⏳    |
-| POST   | `/swaps/{id}/accept`   | 接受换物     | ⏳    |
-| POST   | `/swaps/{id}/reject`   | 拒绝换物     | ⏳    |
-| POST   | `/swaps/{id}/complete` | 完成换物     | ⏳    |
+在 Swagger：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+点击：
+
+```text
+Authorize
+```
+
+只输入：
+
+```text
+JWT_TOKEN
+```
+
+不要手动输入：
+
+```text
+Bearer JWT_TOKEN
+```
+
+因为 `HTTPBearer` 会自动处理 `Bearer`。
 
 ------
 
-# 21. 下一阶段：物品模块
+# 九、Item 物品模块
 
-下一步不再继续修改 JWT。
+目前已经完成基础 CRUD。
 
-开始开发：
-
-```text
-Item
-```
-
-也就是平台上的：
-
-```text
-物品
-```
-
-第一阶段目标：
+## 1. 发布物品
 
 ```text
 POST /items
 ```
 
-让登录用户可以发布自己的物品。
+需要 JWT。
 
-例如：
+当前登录用户自动成为：
 
-```json
-{
-    "title": "机械键盘",
-    "description": "用了半年，成色很好",
-    "category": "数码",
-    "wanted_item": "想换一个鼠标"
-}
+```python
+user_id = current_user.id
 ```
 
-数据库：
+客户端不需要传 `user_id`。
+
+------
+
+## 2. 查询全部物品
 
 ```text
-items
----------------------------------------------------------
-id | user_id | title | description | category | wanted_item
+GET /items
+```
+
+目前不要求登录。
+
+返回所有物品。
+
+------
+
+## 3. 查询单个物品
+
+```text
+GET /items/{item_id}
+```
+
+目前不要求登录。
+
+------
+
+## 4. 修改物品
+
+```text
+PUT /items/{item_id}
+```
+
+需要 JWT。
+
+并且：
+
+```python
+db_item.user_id == current_user.id
+```
+
+只有物品所有者可以修改。
+
+否则：
+
+```text
+403
+无权限修改此物品
 ```
 
 ------
 
-# 22. 发布物品的核心逻辑
-
-发布物品时：
+## 5. 删除物品
 
 ```text
+DELETE /items/{item_id}
+```
+
+需要 JWT。
+
+同样必须满足：
+
+```python
+db_item.user_id == current_user.id
+```
+
+只有物品所有者可以删除。
+
+------
+
+# 十、Swap 交换模块
+
+目前已经开始开发。
+
+## 1. 发起交换申请
+
+接口：
+
+```text
+POST /swaps
+```
+
+请求：
+
+```json
+{
+    "target_item_id": 8,
+    "offered_item_id": 3
+}
+```
+
+其中：
+
+```text
+target_item_id
+→ 想要的物品
+
+offered_item_id
+→ 自己拿出来交换的物品
+```
+
+后端自动获取：
+
+```python
+requester_id = current_user.id
+```
+
+并设置：
+
+```python
+status = 'pending'
+```
+
+------
+
+## 2. 已实现的业务校验
+
+### 不能拿别人的物品交换
+
+检查：
+
+```python
+offered_item.user_id != current_user.id
+```
+
+如果成立：
+
+```text
+403
+不能拿别人的物品进行交换
+```
+
+------
+
+### 不能和自己的物品交换
+
+检查：
+
+```python
+target_item.user_id == current_user.id
+```
+
+如果成立：
+
+```text
+不能和自己的物品进行交换
+```
+
+------
+
+## 3. 查询交换申请
+
+接口：
+
+```text
+GET /swaps
+```
+
+需要 JWT。
+
+查询两类数据：
+
+```text
+① 当前用户发起的交换
+
+② 别人向当前用户物品发起的交换
+```
+
+核心查询：
+
+```python
+swaps = db.query(Swap).join(
+    Items,
+    Swap.target_item_id == Items.id
+).filter(
+    (Swap.requester_id == current_user.id) |
+    (Items.user_id == current_user.id)
+).all()
+```
+
+其中：
+
+```text
+join
+→ 将 Swap 和 Items 连接起来
+
+|
+→ OR / 或者
+
+current_user.id
+→ 当前登录用户的 ID
+```
+
+------
+
+# 十一、最近遇到的问题
+
+## SQLAlchemy Table 重复定义
+
+曾经出现：
+
+```text
+sqlalchemy.exc.InvalidRequestError:
+Table 'users' is already defined for this MetaData instance.
+```
+
+原因最终定位为 `main.py` 同时存在：
+
+```python
+from backend.models import Swap
+from models import User, Items, Swap
+```
+
+导致同一个 models 文件可能被 Python 按不同模块路径加载。
+
+正确做法：
+
+```python
+from models import User, Items, Swap
+```
+
+不要同时混用：
+
+```python
+from backend.models import ...
+```
+
+当前项目保持现有的：
+
+```python
+from models import ...
+from database import ...
+from auth import ...
+```
+
+导入方式即可。
+
+------
+
+# 十二、当前代码风格
+
+目前为了方便学习，数据库 Session 使用：
+
+```python
+db = SessionLocal()
+```
+
+操作完成后：
+
+```python
+db.close()
+```
+
+暂时不急着改成更复杂的数据库依赖注入。
+
+等基础业务完成后，再统一优化：
+
+```python
+get_db()
+```
+
+------
+
+# 十三、当前项目业务流程
+
+目前已经形成：
+
+```text
+用户注册
+   ↓
 用户登录
    ↓
 获得 JWT
    ↓
-POST /items
+Swagger 携带 JWT
    ↓
-HTTPBearer
-   ↓
-验证 JWT
-   ↓
-得到 current_user
-   ↓
-current_user.id
-   ↓
-创建 Item
-   ↓
-保存到 MySQL
-```
-
-重点：
-
-用户不需要自己提交：
-
-```json
-{
-    "user_id": 2
-}
-```
-
-而是后端从 JWT 中自动获取：
-
-```python
-current_user.id
-```
-
-这样可以避免用户伪造：
-
-```text
-user_id
-```
-
-------
-
-# 23. 后续 Item 数据模型
-
-预计：
-
-```python
-class Item(Base):
-    __tablename__ = "items"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    user_id = Column(
-        Integer,
-        nullable=False
-    )
-
-    title = Column(
-        String(100),
-        nullable=False
-    )
-
-    description = Column(
-        String(500),
-        nullable=False
-    )
-
-    category = Column(
-        String(50),
-        nullable=False
-    )
-
-    wanted_item = Column(
-        String(255)
-    )
-```
-
-具体字段后续根据实际开发调整。
-
-------
-
-# 24. 项目后续路线
-
-## 第一阶段：基础后端
-
-```text
-用户
- ↓
-注册
- ↓
-登录
- ↓
-JWT
- ↓
-当前用户
-```
-
-当前已经完成。
-
-------
-
-## 第二阶段：物品系统
-
-```text
 发布物品
- ↓
+   ↓
 查询物品
- ↓
-物品详情
- ↓
-修改物品
- ↓
-删除物品
-```
-
-当前准备开始。
-
-------
-
-## 第三阶段：换物系统
-
-```text
-用户 A
- ↓
-看到用户 B 的物品
- ↓
-发起换物请求
- ↓
-用户 B 接受 / 拒绝
- ↓
-双方确认
- ↓
-换物完成
-```
-
-------
-
-## 第四阶段：Redis / RabbitMQ
-
-后续可以加入：
-
-- Redis
-- RabbitMQ
-
-用于：
-
-```text
-缓存
-消息
-异步任务
-```
-
-------
-
-## 第五阶段：AI 物品理解
-
-用户输入：
-
-```text
-“我有一个用了两年的罗技机械键盘，
-想换一个游戏鼠标。”
-```
-
-LLM 提取：
-
-```json
-{
-    "item": "机械键盘",
-    "category": "数码",
-    "condition": "使用两年",
-    "wanted": "游戏鼠标"
-}
-```
-
-------
-
-## 第六阶段：Embedding
-
-将物品信息转换成向量：
-
-```text
-物品文本
    ↓
-Embedding Model
+修改 / 删除自己的物品
    ↓
-Vector
+发起交换申请
+   ↓
+查看交换申请
 ```
 
-例如：
+下一步：
 
 ```text
-机械键盘
+别人收到交换申请
+        ↓
+验证是否是目标物品的主人
+        ↓
+接受 / 拒绝
+        ↓
+pending
+   ↙       ↘
+accepted  rejected
+```
+
+------
+
+# 十四、本周剩余任务
+
+当前 Swap 模块还剩：
+
+## 1. 接受交换
+
+```text
+PUT /swaps/{swap_id}/accept
+```
+
+要求：
+
+> 只有目标物品的所有者才能接受交换。
+
+------
+
+## 2. 拒绝交换
+
+```text
+PUT /swaps/{swap_id}/reject
+```
+
+要求：
+
+> 只有目标物品的所有者才能拒绝交换。
+
+------
+
+## 3. 完整测试
+
+测试：
+
+```text
+用户A
  ↓
-[0.12, -0.31, 0.52, ...]
+发布物品A
+
+用户B
+ ↓
+发布物品B
+
+A
+ ↓
+申请交换B的物品
+
+B
+ ↓
+查看交换申请
+
+B
+ ↓
+接受/拒绝
+
+Swap状态：
+pending → accepted
+或
+pending → rejected
+```
+
+同时测试非法操作：
+
+```text
+A不能拿B的物品交换
+A不能和自己的物品交换
+A不能接受自己发出的交换申请
+非目标物品所有者不能接受/拒绝
 ```
 
 ------
 
-## 第七阶段：向量检索
+# 十五、本周 Git 提交
 
-用户发布：
+Swap 模块完成后：
 
-```text
-机械键盘
+```bash
+git add .
+git commit -m "完成交换申请模块"
+git push origin master
 ```
-
-系统寻找：
-
-```text
-鼠标
-键盘
-耳机
-显示器
-游戏手柄
-```
-
-等语义上相关的物品。
 
 ------
 
-## 第八阶段：智能换物推荐
+# 十六、后续项目路线
+
+## 阶段一：后端基础
+
+```text
+FastAPI
+SQLAlchemy
+MySQL
+Pydantic
+JWT
+bcrypt
+```
+
+状态：
+
+```text
+基本完成
+```
+
+------
+
+## 阶段二：核心业务
+
+```text
+User
+Item
+Swap
+```
+
+当前：
+
+```text
+User       ✅
+Item       ✅
+Swap       🔄
+```
+
+------
+
+## 阶段三：数据分析
+
+使用真实业务数据：
+
+```text
+NumPy
+Pandas
+Matplotlib
+Seaborn
+```
+
+分析内容例如：
+
+```text
+用户数量
+物品分类分布
+物品价格分布
+交换次数
+热门物品类别
+用户活跃度
+交换成功率
+```
+
+------
+
+## 阶段四：机器学习
+
+使用项目真实数据进行：
+
+```text
+特征工程
+↓
+scikit-learn
+↓
+KNN
+↓
+物品推荐 / 相似物品
+```
+
+数据量足够后再考虑：
+
+```text
+XGBoost
+```
+
+------
+
+## 阶段五：NLP / LLM
+
+对用户自然语言描述的物品进行：
+
+```text
+文本清洗
+↓
+关键词 / 属性提取
+↓
+Embedding
+↓
+语义相似度
+↓
+智能匹配
+```
+
+例如用户输入：
+
+```text
+“九成新苹果无线耳机，想换一个机械键盘”
+```
+
+系统提取：
+
+```text
+类别：数码
+物品：无线耳机
+品牌：苹果
+成色：九成新
+交换意向：机械键盘
+```
+
+------
+
+## 阶段六：LangChain / LangGraph
+
+加入：
+
+```text
+Tool
+Agent
+RAG
+Memory
+Workflow
+```
+
+实现例如：
+
+```text
+智能交换助手
+```
+
+可以帮助用户：
+
+```text
+查询物品
+分析物品
+寻找合适交换对象
+推荐相似物品
+回答平台相关问题
+```
+
+------
+
+## 阶段七：工程化
+
+加入：
+
+```text
+Redis
+RabbitMQ
+Docker
+Linux
+Nginx
+```
 
 最终形成：
 
 ```text
-用户物品
+FastAPI
    ↓
-Embedding
+Nginx
    ↓
-向量检索
+Redis
    ↓
-候选物品
+RabbitMQ
    ↓
-LLM 分析
+MySQL
    ↓
-匹配度评分
-   ↓
-推荐换物对象
+AI / ML 服务
 ```
 
 ------
 
-## 第九阶段：LangChain / LangGraph
+# 十七、项目最终目标
 
-最终加入 AI Agent：
+最终项目不只是：
+
+```text
+登录
+CRUD
+```
+
+而是：
 
 ```text
 用户
  ↓
-AI Agent
+发布物品
  ↓
-判断用户需求
+浏览物品
  ↓
-查询物品
+交换申请
  ↓
-向量检索
+权限控制
  ↓
-分析匹配度
+交换状态管理
  ↓
-推荐物品
+数据分析
  ↓
-用户确认
-```
-
-LangGraph 可以负责：
-
-```text
-状态管理
+机器学习推荐
  ↓
-节点
+NLP物品理解
  ↓
-条件路由
+Embedding语义匹配
  ↓
-工具调用
- ↓
-人工确认
- ↓
-长期记忆
-```
-
-------
-
-# 25. 当前开发原则
-
-这个项目采用：
-
-```text
-先把传统后端做完整
-        ↓
-再加入 AI
-```
-
-不要一开始就把：
-
-```text
-FastAPI
-MySQL
-Redis
-RabbitMQ
-LangChain
-LangGraph
-Embedding
-向量数据库
-```
-
-全部混在一起。
-
-当前优先级：
-
-```text
-用户系统
- ↓
-物品系统
- ↓
-换物系统
+LangChain / LangGraph AI助手
  ↓
 Redis / RabbitMQ
  ↓
-Embedding / 向量检索
- ↓
-LangChain
- ↓
-LangGraph
- ↓
-AI 智能推荐
+Docker + Linux + Nginx部署
 ```
 
-------
+最终形成一个可以用于：
 
-# 26. 当前进度节点
+> **简历 + GitHub + 面试讲解**
 
-### 已完成
-
-```text
-MySQL
-  ↓
-SQLAlchemy
-  ↓
-User
-  ↓
-注册
-  ↓
-bcrypt
-  ↓
-登录
-  ↓
-JWT
-  ↓
-HTTPBearer
-  ↓
-/me
-```
-
-### 当前正在做
-
-```text
-Item
- ↓
-POST /items
-```
-
-### 下一步
-
-```text
-GET /items
-GET /items/{id}
-PUT /items/{id}
-DELETE /items/{id}
-```
-
-然后进入：
-
-```text
-Swap
-```
-
-------
-
-# 27. Git 工作流
-
-GitHub：
-
-```text
-swap_platform
-```
-
-当前分支：
-
-```text
-master
-```
-
-正常开发流程：
-
-```bash
-git add .
-git commit -m "本次修改内容"
-git push origin master
-```
-
-例如完成商品发布功能后：
-
-```bash
-git add .
-git commit -m "完成物品发布功能"
-git push origin master
-```
-
-如果只想提交指定文件，也可以：
-
-```bash
-git add backend/main.py backend/models.py backend/schemas.py
-git commit -m "完成物品发布功能"
-git push origin master
-```
-
-------
-
-# 28. Git 注意事项
-
-不要提交：
-
-```text
-.env
-```
-
-不要把：
-
-```text
-DATABASE_URL
-SECRET_KEY
-API_KEY
-```
-
-等真实敏感信息上传到 GitHub。
-
-`.gitignore` 至少应该包含：
-
-```text
-.env
-__pycache__/
-*.pyc
-.venv/
-venv/
-.idea/
-```
-
-------
-
-# 29. 当前最重要的状态
-
-截至 2026-09-03：
-
-**用户认证模块已经完成并验证成功。**
-
-特别是：
-
-```text
-/register
-/login
-/me
-```
-
-已经可以正常工作。
-
-因此下一次继续项目时：
-
-> **不要重新设计项目，不要重新做 JWT。**
-
-直接从：
-
-```text
-Item 数据模型
-        ↓
-Item Schema
-        ↓
-POST /items
-        ↓
-JWT 获取当前用户
-        ↓
-保存物品到 MySQL
-```
-
-开始。
-
-目标是让第一个真实的“物换物平台业务功能”跑起来。
+的完整 AI + 后端综合项目。

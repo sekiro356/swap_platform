@@ -1,13 +1,11 @@
 # 负责启动 FastAPI
 
-from fastapi import FastAPI,Depends
+from fastapi import FastAPI,Depends,HTTPException
 import uvicorn
 from database import engine,Base,SessionLocal
-from models import User # 表
-from schemas import UserCreate,UserLogin # 客户端输入的要求
-from auth import create_access_token
+from models import User,Items,Swap # 表
+from schemas import UserCreate,UserLogin,ItemCreate,SwapCreat # 客户端输入的要求
 import bcrypt
-
 from auth import create_access_token,get_current_user
 app = FastAPI()
 
@@ -96,17 +94,262 @@ def login(user:UserLogin):
 
 
 @app.get('/me')
+# 执行 /me 之前，先执行 get_current_user()，把得到的用户交给我。
 def get_me(current_user:User = Depends(get_current_user)):
     return {
         'user_id':current_user.id,
         'username':current_user.username
     }
 
+# 添加物品
+@app.post('/items')
+def create_item(
+        item:ItemCreate,current_user:User = Depends(get_current_user)
+):
+    db = SessionLocal()
+
+    new_item = Items(
+        name=item.name,
+        description=item.description,
+        category=item.category,
+        price=item.price,
+        user_id=current_user.id
+    )
+
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+
+    db.close()
+
+    return {
+        'messages':'物品发布成功',
+        'item_id':new_item.id,
+        'name':new_item.name,
+        'user_id':new_item.user_id,
+    }
+
+# 查询全部物品
+@app.get('/items')
+def get_items():
+    db = SessionLocal()
+
+    items = db.query(Items).all()
+
+    result = []
+
+    for item in items:
+        result.append({
+            'item_id':item.id,
+            'name':item.name,
+            'description':item.description,
+            'category':item.category,
+            'price':item.price,
+            'user_id':item.user_id
+        }
+        )
+
+    db.close()
+
+    return result
+
+# 查询单个物品
+@app.get('/items/{item_id}')
+def get_item(item_id:int):
+    db = SessionLocal()
+
+    item = db.query(Items).filter(
+        Items.id == item_id
+    ).first()
+
+    db.close()
+
+    if not item:
+        return {'messages':'物品不存在'}
+
+
+    return {
+        'item_id': item.id,
+        'name': item.name,
+        'description': item.description,
+        'category': item.category,
+        'price': item.price,
+        'user_id': item.user_id
+    }
+
+
+
+# 添加物品修改接口
+@app.put('/items/{item_id}')
+def update_item(
+        item_id:int,
+        item:ItemCreate,
+        current_user : User = Depends(get_current_user)
+):
+    db = SessionLocal()
+
+    db_item = db.query(Items).filter(
+        Items.id == item_id
+    ).first()
+
+    # 物品不存在
+    if not db_item:
+        db.close()
+        return {'messages':'物品不存在'}
+
+    # 不是自己的商品
+    if db_item.user_id != current_user.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail='无权限修改此物品'
+        )
+
+    # 修改物品
+    db_item.name = item.name
+    db_item.description = item.description
+    db_item.category = item.category
+    db_item.price = item.price
+
+    db.commit()
+    db.refresh(db_item)
+    db.close()
+
+    return {
+        'messages':'修改成功',
+        'item_id': db_item.id,
+        'name': db_item.name,
+        'description': db_item.description,
+        'category': db_item.category,
+        'price': db_item.price,
+        'user_id': db_item.user_id
+    }
+
+
+# 删除接口
+@app.delete('/items/{item_id}')
+def delete_item(item_id:int,current_user:User = Depends(get_current_user)):
+    db = SessionLocal()
+
+    db_item = db.query(Items).filter(
+        Items.id == item_id
+    ).first()
+
+    # 物品不存在
+    if not db_item:
+        db.close()
+        return {'messages': '物品不存在'}
+
+    # 不是自己的商品
+    if db_item.user_id != current_user.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail='无权限删除此物品'
+        )
+
+
+    db.delete(db_item)
+    db.commit()
+    db.close()
+
+    return {
+        'messages': '删除成功'
+    }
+
+@app.post('/swaps')
+def create_swap(swap:SwapCreat,current_user:User=Depends(get_current_user)):
+    db = SessionLocal()
+
+    # 查询想要交换的物品
+    target_item = db.query(Items).filter(
+        Items.id == swap.target_item_id
+    ).first()
+
+    if not target_item:
+        db.close()
+
+        return {'messages':'物品暂时不存在'}
+
+    # 查询自己拿出来交换的物品
+    offered_item = db.query(Items).filter(
+        Items.id == swap.offered_item_id
+    ).first()
+
+    if not offered_item:
+        db.close()
+        return {'messages':'交换物品不存在'}
+
+    # 不能拿别人的物品进行交换
+    if offered_item.user_id != current_user.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail='不能拿别人的物品进行交换'
+        )
+
+    # 不能拿自己的物品和自己的物品进行交换
+    if target_item.user_id == current_user.id:
+        db.close()
+        return {'messages':'不能和自己的物品进行交换'}
+
+    # 创建交换申请
+    new_swap = Swap(
+        requester_id = current_user.id,
+        target_item_id= swap.target_item_id,
+        offered_item_id=swap.offered_item_id,
+        status='pending'
+    )
+    db.add(new_swap)
+    db.commit()
+    db.refresh(new_swap)
+    db.close()
+
+    return {
+        'messages':'交换申请成功!',
+        'swap_id':new_swap.id,
+        'request_id':new_swap.requester_id,
+        'target_item_id':new_swap.target_item_id,
+        'offer_item_id':new_swap.offered_item_id,
+        'status':new_swap.status
+    }
+
+@app.get('/swaps')
+def get_swaps(current_user:User=Depends(get_current_user)):
+    db = SessionLocal()
+
+    # 查询
+    #   我发起的交换
+    #   别人向我的物品发起的交换
+    swaps = db.query(Swap).join(
+        Items,
+        Swap.target_item_id == Items.id
+    ).filter(
+        (Swap.requester_id == current_user.id) |
+        (Items.user_id == current_user.id)
+    ).all()
+
+    result = []
+
+    for swap in swaps:
+        result.append({
+            'swap_id':swap.id,
+            'requester_id':swap.requester_id,
+            'target_item_id':swap.target_item_id,
+            'offered_item_id':swap.offered_item_id,
+            'status':swap.status
+        })
+
+    db.close()
+
+    return result
+
+
 
 
 
 if __name__ == '__main__':
-    uvicorn.run('main:app',reload=True)
+    uvicorn.run('main:app')
 
 
 

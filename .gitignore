@@ -1,2 +1,19 @@
 .env
 日志记录.txt
+技术.txt
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# Python 虚拟环境
+.venv/
+venv/
+env/
+
+# PyCharm 配置
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db

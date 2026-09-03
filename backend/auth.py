@@ -30,7 +30,7 @@ def create_access_token(user_id:int):
 
     return token
 
-security = HTTPBearer()
+security = HTTPBearer() # 负责从请求中拿出 token
 
 def get_current_user(credentials : HTTPAuthorizationCredentials = Depends(security)):
 
