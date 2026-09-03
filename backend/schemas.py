@@ -7,8 +7,10 @@ class UserCreate(BaseModel):
     username:str
     password:str
 
-
-
+# 登录
+class UserLogin(BaseModel):
+    username:str
+    password:str
 
 
 
