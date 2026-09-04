@@ -27,6 +27,8 @@ class Items(Base):
 
     user_id = Column(Integer,nullable=False)                # 物品发布者
 
+    status = Column(String(20),nullable=False,default='available')      # 设置物品是否存在，防止已经交换出去了结果还显示物品存在
+
 
 # 交换申请表
 class Swap(Base):

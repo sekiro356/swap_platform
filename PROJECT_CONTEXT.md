@@ -4,7 +4,18 @@
 
 项目名称：`swap_platform`
 
-项目目标：开发一个完整的“以物换物平台”后端项目，并逐步加入数据分析、机器学习、NLP/LLM、LangChain/LangGraph、Redis、RabbitMQ、Docker、Linux、Nginx 等技术。
+项目目标：开发一个完整的“以物换物平台”后端项目，并逐步加入：
+
+- 数据分析
+- 机器学习
+- NLP / LLM
+- Embedding
+- LangChain / LangGraph
+- Redis
+- RabbitMQ
+- Docker
+- Linux
+- Nginx
 
 项目定位：
 
@@ -20,9 +31,56 @@
 
 ------
 
-# 二、当前技术栈
+# 二、当前项目阶段
 
-## 后端基础
+截至 **2026-09-04**：
+
+```text
+第一阶段：FastAPI 后端基础 + 核心交换业务
+状态：基本完成
+```
+
+目前已经完成：
+
+```text
+用户
+├── 注册
+├── 登录
+├── bcrypt 密码哈希
+├── JWT 身份认证
+└── 当前用户查询
+
+物品
+├── 发布
+├── 查询全部
+├── 查询单个
+├── 修改
+├── 删除
+└── 物品状态管理
+
+交换
+├── 发起交换
+├── 查询交换
+├── 接受交换
+├── 拒绝交换
+├── 权限控制
+├── 状态控制
+└── 交换完成后锁定双方物品
+```
+
+第一阶段已经完成，不需要继续扩展基础交换功能。
+
+下一阶段进入：
+
+```text
+数据分析
+```
+
+------
+
+# 三、当前技术栈
+
+## 后端
 
 - Python
 - FastAPI
@@ -40,8 +98,6 @@
 
 ## 后续计划
 
-- Redis
-- RabbitMQ
 - NumPy
 - Pandas
 - Matplotlib
@@ -54,13 +110,15 @@
 - 向量数据库 / pgvector
 - LangChain
 - LangGraph
+- Redis
+- RabbitMQ
 - Docker
 - Linux
 - Nginx
 
 ------
 
-# 三、当前项目结构
+# 四、当前项目结构
 
 ```text
 swap_platform/
@@ -81,22 +139,41 @@ swap_platform/
 └── PROJECT_CONTEXT.md
 ```
 
-目前主要业务代码仍然集中在 `backend/main.py` 中。
+目前主要业务代码仍然集中在：
 
-后续项目变大后，再逐步将业务拆到 `routers/`。
+```text
+backend/main.py
+```
+
+暂时不要进行大规模重构。
+
+等核心功能和数据分析完成后，再根据实际需要逐步拆分。
 
 ------
 
-# 四、数据库
+# 五、数据库
 
-当前使用：
+当前数据库：
 
-- MySQL
-- SQLAlchemy ORM
+```text
+MySQL
+```
 
-数据库连接通过 `.env` 中的 `DATABASE_URL` 配置。
+ORM：
 
-`database.py` 负责：
+```text
+SQLAlchemy
+```
+
+数据库连接通过 `.env` 中的：
+
+```text
+DATABASE_URL
+```
+
+配置。
+
+`database.py` 主要提供：
 
 ```python
 engine
@@ -104,28 +181,31 @@ SessionLocal
 Base
 ```
 
-并通过：
+启动时：
 
 ```python
 Base.metadata.create_all(bind=engine)
 ```
 
-启动时自动创建不存在的表。
+用于创建不存在的数据库表。
+
+注意：
+
+> `Base.metadata.create_all()` 只负责创建不存在的表，不会自动修改已经存在的表结构。
+
+因此以后给已有表增加字段，需要通过 SQL：
+
+```sql
+ALTER TABLE ...
+```
+
+同步数据库结构。
 
 ------
 
-# 五、当前数据库模型
+# 六、当前数据库模型
 
 ## 1. User 用户表
-
-```python
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-```
 
 主要字段：
 
@@ -135,36 +215,21 @@ username
 password
 ```
 
-密码数据库中保存的是 bcrypt 哈希，而不是明文密码。
+密码使用 bcrypt 哈希保存。
+
+数据库中：
+
+```text
+password ≠ 明文密码
+```
+
+而是 bcrypt 生成的哈希字符串。
 
 ------
 
-## 2. Items 物品表
+# 七、Items 物品表
 
-当前模型名称使用：
-
-```python
-class Items(Base):
-```
-
-表名：
-
-```python
-__tablename__ = 'items'
-```
-
-字段：
-
-```text
-id
-name
-description
-category
-price
-user_id
-```
-
-当前模型：
+模型：
 
 ```python
 class Items(Base):
@@ -175,20 +240,75 @@ class Items(Base):
     description = Column(String(1000), nullable=False)
     category = Column(String(50), nullable=False)
     price = Column(Integer, nullable=False)
+
     user_id = Column(Integer, nullable=False)
+
+    status = Column(String(20), nullable=False, default='available')
 ```
 
-其中：
+字段：
 
 ```text
-user_id = 物品发布者
+id
+    物品 ID
+
+name
+    物品名称
+
+description
+    物品描述
+
+category
+    物品分类
+
+price
+    物品价格
+
+user_id
+    物品发布者
+
+status
+    当前物品是否还能参与交换
 ```
 
 ------
 
-## 3. Swap 交换申请表
+## Items.status
 
 当前使用：
+
+```text
+available
+unavailable
+```
+
+含义：
+
+```text
+available
+    可以参与交换
+
+unavailable
+    已经交换完成，不能再次参与交换
+```
+
+数据库已经同步增加：
+
+```sql
+status VARCHAR(20) NOT NULL DEFAULT 'available'
+```
+
+新发布物品默认：
+
+```text
+available
+```
+
+------
+
+# 八、Swap 交换申请表
+
+模型：
 
 ```python
 class Swap(Base):
@@ -209,19 +329,19 @@ status
 
 ```text
 requester_id
-→ 谁发起交换
+    发起交换的用户
 
 target_item_id
-→ 想要交换得到的物品
+    发起者想要的物品
 
 offered_item_id
-→ 发起者拿出来交换的物品
+    发起者拿出来交换的物品
 
 status
-→ 当前交换状态
+    当前交换申请状态
 ```
 
-目前状态：
+当前状态：
 
 ```text
 pending
@@ -229,45 +349,51 @@ accepted
 rejected
 ```
 
-当前默认：
+流程：
 
-```python
-status = 'pending'
+```text
+pending
+   ↓
+   ├── accepted
+   │
+   └── rejected
 ```
 
 ------
 
-# 六、用户认证模块
+# 九、用户认证模块
 
-## 注册
+## 1. 注册
 
 接口：
 
-```text
+```http
 POST /register
 ```
 
 流程：
 
 ```text
-客户端提交用户名、密码
-        ↓
+用户名 + 密码
+       ↓
 查询用户名是否存在
-        ↓
-bcrypt 加密密码
-        ↓
-保存 User
-        ↓
+       ↓
+bcrypt 哈希密码
+       ↓
+创建 User
+       ↓
+保存数据库
+       ↓
 返回注册成功
 ```
 
 ------
 
-## 登录
+## 2. 登录
 
 接口：
 
-```text
+```http
 POST /login
 ```
 
@@ -287,41 +413,53 @@ create_access_token(user_id)
 返回 JWT
 ```
 
-返回：
+------
 
-```json
-{
-    "messages": "登陆成功",
-    "user_id": 2,
-    "user_name": "xxx",
-    "access_token": "xxxxx",
-    "token_type": "bearer"
-}
+## 3. 当前用户
+
+接口：
+
+```http
+GET /me
 ```
+
+使用：
+
+```python
+Depends(get_current_user)
+```
+
+获取当前用户。
+
+因此：
+
+```python
+current_user.id
+```
+
+就是当前登录用户 ID。
 
 ------
 
-# 七、JWT 认证
+# 十、JWT 认证
 
 `auth.py` 使用：
 
-```python
-HTTPBearer()
+```text
+HTTPBearer
 ```
 
-从请求头获取：
+请求头：
 
 ```text
 Authorization: Bearer <JWT>
 ```
 
-JWT 中保存：
+JWT 中包含：
 
-```python
-{
-    "user_id": user_id,
-    "exp": ...
-}
+```text
+user_id
+exp
 ```
 
 通过：
@@ -330,107 +468,101 @@ JWT 中保存：
 get_current_user()
 ```
 
-解析 JWT，并查询数据库中的 User。
-
-因此：
-
-```python
-current_user.id
-```
-
-就是当前登录用户的 ID。
+解析 token，并查询数据库中的 User。
 
 ------
 
-# 八、Swagger 鉴权
+# 十一、Swagger
 
-在 Swagger：
+开发测试地址：
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-点击：
+Swagger 中点击：
 
 ```text
 Authorize
 ```
 
-只输入：
+输入：
 
 ```text
 JWT_TOKEN
 ```
 
-不要手动输入：
+不需要手动输入：
 
 ```text
 Bearer JWT_TOKEN
 ```
 
-因为 `HTTPBearer` 会自动处理 `Bearer`。
+因为 `HTTPBearer` 会自动处理。
 
 ------
 
-# 九、Item 物品模块
-
-目前已经完成基础 CRUD。
+# 十二、物品模块
 
 ## 1. 发布物品
 
-```text
+```http
 POST /items
 ```
 
 需要 JWT。
 
-当前登录用户自动成为：
+创建物品时：
 
 ```python
-user_id = current_user.id
+user_id=current_user.id
 ```
 
-客户端不需要传 `user_id`。
+因此用户无法通过请求体伪造物品所有者。
+
+新物品默认：
+
+```text
+status = available
+```
 
 ------
 
 ## 2. 查询全部物品
 
-```text
+```http
 GET /items
 ```
 
-目前不要求登录。
-
-返回所有物品。
+不需要 JWT。
 
 ------
 
 ## 3. 查询单个物品
 
-```text
+```http
 GET /items/{item_id}
 ```
 
-目前不要求登录。
+不需要 JWT。
 
 ------
 
 ## 4. 修改物品
 
-```text
+```http
 PUT /items/{item_id}
 ```
 
 需要 JWT。
 
-并且：
+只有：
 
 ```python
 db_item.user_id == current_user.id
 ```
 
-只有物品所有者可以修改。
+才能修改。
 
 否则：
 
@@ -443,31 +575,27 @@ db_item.user_id == current_user.id
 
 ## 5. 删除物品
 
-```text
+```http
 DELETE /items/{item_id}
 ```
 
 需要 JWT。
 
-同样必须满足：
-
-```python
-db_item.user_id == current_user.id
-```
-
-只有物品所有者可以删除。
+同样只有物品所有者可以删除。
 
 ------
 
-# 十、Swap 交换模块
+# 十三、交换模块
 
-目前已经开始开发。
+交换模块目前已经完成。
 
-## 1. 发起交换申请
+------
+
+## 1. 发起交换
 
 接口：
 
-```text
+```http
 POST /swaps
 ```
 
@@ -480,41 +608,57 @@ POST /swaps
 }
 ```
 
-其中：
+含义：
 
 ```text
 target_item_id
-→ 想要的物品
+    我想要的物品
 
 offered_item_id
-→ 自己拿出来交换的物品
+    我提供的物品
 ```
 
-后端自动获取：
+后端自动确定：
 
 ```python
 requester_id = current_user.id
 ```
 
-并设置：
+新申请：
 
-```python
-status = 'pending'
+```text
+status = pending
 ```
 
 ------
 
-## 2. 已实现的业务校验
+# 十四、发起交换时的业务校验
 
-### 不能拿别人的物品交换
+目前已经实现以下检查。
 
-检查：
+## 1. 目标物品必须存在
 
 ```python
-offered_item.user_id != current_user.id
+if not target_item:
 ```
 
-如果成立：
+------
+
+## 2. 自己提供的物品必须存在
+
+```python
+if not offered_item:
+```
+
+------
+
+## 3. 不能拿别人的物品交换
+
+```python
+if offered_item.user_id != current_user.id:
+```
+
+返回：
 
 ```text
 403
@@ -523,15 +667,43 @@ offered_item.user_id != current_user.id
 
 ------
 
-### 不能和自己的物品交换
-
-检查：
+## 4. 自己提供的物品必须是 available
 
 ```python
-target_item.user_id == current_user.id
+if offered_item.status != 'available':
 ```
 
-如果成立：
+返回：
+
+```text
+400
+您提供的物品已经无法进行交换
+```
+
+------
+
+## 5. 目标物品必须是 available
+
+```python
+if target_item.status != 'available':
+```
+
+返回：
+
+```text
+400
+目标物品已无法进行交换
+```
+
+------
+
+## 6. 不能和自己的物品交换
+
+```python
+if target_item.user_id == current_user.id:
+```
+
+返回：
 
 ```text
 不能和自己的物品进行交换
@@ -539,17 +711,17 @@ target_item.user_id == current_user.id
 
 ------
 
-## 3. 查询交换申请
+# 十五、查询交换申请
 
 接口：
 
-```text
+```http
 GET /swaps
 ```
 
 需要 JWT。
 
-查询两类数据：
+当前用户可以看到两类交换：
 
 ```text
 ① 当前用户发起的交换
@@ -569,22 +741,385 @@ swaps = db.query(Swap).join(
 ).all()
 ```
 
-其中：
+------
+
+# 十六、接受交换
+
+接口：
+
+```http
+PUT /swaps/{swap_id}/accept
+```
+
+接受流程：
 
 ```text
-join
-→ 将 Swap 和 Items 连接起来
-
-|
-→ OR / 或者
-
-current_user.id
-→ 当前登录用户的 ID
+查询 Swap
+    ↓
+Swap 是否存在
+    ↓
+status 是否为 pending
+    ↓
+查询 target_item
+    ↓
+查询 offered_item
+    ↓
+两个物品是否存在
+    ↓
+当前用户是不是 target_item 主人
+    ↓
+检查两个物品是否还是 available
+    ↓
+Swap → accepted
+    ↓
+target_item → unavailable
+offered_item → unavailable
+    ↓
+commit
 ```
 
 ------
 
-# 十一、最近遇到的问题
+## 接受权限
+
+只有：
+
+```text
+target_item.user_id == current_user.id
+```
+
+才能接受。
+
+否则：
+
+```text
+403
+无权接受此交换
+```
+
+------
+
+## 防止重复处理
+
+只有：
+
+```text
+pending
+```
+
+状态可以接受。
+
+如果已经：
+
+```text
+accepted
+```
+
+或者：
+
+```text
+rejected
+```
+
+再次处理：
+
+```text
+400
+该交换申请已经处理过了
+```
+
+------
+
+## 接受后锁定物品
+
+成功接受后：
+
+```python
+swap.status = 'accepted'
+
+target_item.status = 'unavailable'
+offered_item.status = 'unavailable'
+```
+
+因此：
+
+```text
+双方物品
+    ↓
+unavailable
+```
+
+不能再次发起交换。
+
+------
+
+# 十七、拒绝交换
+
+接口：
+
+```http
+PUT /swaps/{swap_id}/reject
+```
+
+只有目标物品主人可以拒绝。
+
+判断：
+
+```python
+target_item.user_id == current_user.id
+```
+
+否则：
+
+```text
+403
+无权拒绝此交换
+```
+
+只有：
+
+```text
+pending
+```
+
+状态可以拒绝。
+
+拒绝后：
+
+```text
+pending
+   ↓
+rejected
+```
+
+**拒绝不会修改物品状态。**
+
+因为交换没有成功，所以双方物品仍然保持：
+
+```text
+available
+```
+
+可以继续参与其他交换。
+
+------
+
+# 十八、当前交换业务流程
+
+完整流程：
+
+```text
+用户 A
+  ↓
+发布物品 A
+  ↓
+用户 B
+  ↓
+发布物品 B
+  ↓
+A 发起交换申请
+  ↓
+pending
+  ↓
+B 查看申请
+  ↓
+ ┌───────────────┐
+ ↓               ↓
+接受             拒绝
+ ↓               ↓
+accepted        rejected
+ ↓
+A物品 unavailable
+B物品 unavailable
+```
+
+------
+
+# 十九、当前已经解决的业务漏洞
+
+目前已经增加了以下业务保护：
+
+```text
+✅ A 不能拿 B 的物品作为自己的交换物品
+
+✅ A 不能拿自己的物品和自己的物品交换
+
+✅ unavailable 物品不能再次发起交换
+
+✅ 只有目标物品主人才能接受
+
+✅ 只有目标物品主人才能拒绝
+
+✅ accepted 之后不能再次处理
+
+✅ rejected 之后不能再次处理
+
+✅ 接受交换后双方物品变成 unavailable
+
+✅ 接受交换前再次检查双方物品是否仍然 available
+```
+
+------
+
+# 二十、第一阶段测试
+
+交换模块需要覆盖以下测试。
+
+## 正常流程
+
+```text
+A 登录
+ ↓
+A 发布物品 A
+ ↓
+B 登录
+ ↓
+B 发布物品 B
+ ↓
+A 申请交换 B 的物品
+ ↓
+pending
+ ↓
+B 查询 /swaps
+ ↓
+B 接受
+ ↓
+accepted
+ ↓
+A/B 两个物品 → unavailable
+```
+
+------
+
+## 拒绝流程
+
+```text
+A 发起交换
+ ↓
+pending
+ ↓
+B 拒绝
+ ↓
+rejected
+```
+
+双方物品仍然：
+
+```text
+available
+```
+
+------
+
+## 非法流程
+
+测试：
+
+```text
+A 拿 B 的物品作为 offered_item
+```
+
+应该：
+
+```text
+403
+```
+
+测试：
+
+```text
+A 和自己的物品交换
+```
+
+应该拒绝。
+
+测试：
+
+```text
+A 使用 unavailable 物品发起交换
+```
+
+应该：
+
+```text
+400
+```
+
+测试：
+
+```text
+C 接受 A → B 的交换
+```
+
+应该：
+
+```text
+403
+```
+
+测试：
+
+```text
+C 拒绝 A → B 的交换
+```
+
+应该：
+
+```text
+403
+```
+
+测试：
+
+```text
+已经 accepted 的申请再次 accept
+```
+
+应该：
+
+```text
+400
+```
+
+测试：
+
+```text
+已经 rejected 的申请再次 reject
+```
+
+应该：
+
+```text
+400
+```
+
+------
+
+# 二十一、代码风格
+
+目前数据库操作仍然采用：
+
+```python
+db = SessionLocal()
+```
+
+操作完成：
+
+```python
+db.close()
+```
+
+暂时不进行：
+
+```python
+get_db()
+```
+
+等基础业务更加稳定后，再统一进行数据库依赖注入优化。
+
+------
+
+# 二十二、已遇到并解决的问题
 
 ## SQLAlchemy Table 重复定义
 
@@ -595,176 +1130,53 @@ sqlalchemy.exc.InvalidRequestError:
 Table 'users' is already defined for this MetaData instance.
 ```
 
-原因最终定位为 `main.py` 同时存在：
+原因：
 
-```python
-from backend.models import Swap
-from models import User, Items, Swap
-```
-
-导致同一个 models 文件可能被 Python 按不同模块路径加载。
-
-正确做法：
-
-```python
-from models import User, Items, Swap
-```
-
-不要同时混用：
+同一个 models 文件被不同模块路径加载，例如同时使用：
 
 ```python
 from backend.models import ...
 ```
 
-当前项目保持现有的：
+和：
 
 ```python
 from models import ...
-from database import ...
-from auth import ...
 ```
 
-导入方式即可。
+会导致 Python 可能将其当成不同模块加载。
 
-------
-
-# 十二、当前代码风格
-
-目前为了方便学习，数据库 Session 使用：
+当前统一使用：
 
 ```python
-db = SessionLocal()
+from models import User, Items, Swap
+from database import engine, Base, SessionLocal
+from auth import create_access_token, get_current_user
 ```
 
-操作完成后：
+不要混用：
 
 ```python
-db.close()
-```
-
-暂时不急着改成更复杂的数据库依赖注入。
-
-等基础业务完成后，再统一优化：
-
-```python
-get_db()
+from backend.models import ...
 ```
 
 ------
 
-# 十三、当前项目业务流程
+# 二十三、Git
 
-目前已经形成：
-
-```text
-用户注册
-   ↓
-用户登录
-   ↓
-获得 JWT
-   ↓
-Swagger 携带 JWT
-   ↓
-发布物品
-   ↓
-查询物品
-   ↓
-修改 / 删除自己的物品
-   ↓
-发起交换申请
-   ↓
-查看交换申请
-```
-
-下一步：
+当前主分支：
 
 ```text
-别人收到交换申请
-        ↓
-验证是否是目标物品的主人
-        ↓
-接受 / 拒绝
-        ↓
-pending
-   ↙       ↘
-accepted  rejected
+master
 ```
 
-------
-
-# 十四、本周剩余任务
-
-当前 Swap 模块还剩：
-
-## 1. 接受交换
+远程仓库：
 
 ```text
-PUT /swaps/{swap_id}/accept
+https://github.com/sekiro356/swap_platform.git
 ```
 
-要求：
-
-> 只有目标物品的所有者才能接受交换。
-
-------
-
-## 2. 拒绝交换
-
-```text
-PUT /swaps/{swap_id}/reject
-```
-
-要求：
-
-> 只有目标物品的所有者才能拒绝交换。
-
-------
-
-## 3. 完整测试
-
-测试：
-
-```text
-用户A
- ↓
-发布物品A
-
-用户B
- ↓
-发布物品B
-
-A
- ↓
-申请交换B的物品
-
-B
- ↓
-查看交换申请
-
-B
- ↓
-接受/拒绝
-
-Swap状态：
-pending → accepted
-或
-pending → rejected
-```
-
-同时测试非法操作：
-
-```text
-A不能拿B的物品交换
-A不能和自己的物品交换
-A不能接受自己发出的交换申请
-非目标物品所有者不能接受/拒绝
-```
-
-------
-
-# 十五、本周 Git 提交
-
-Swap 模块完成后：
+第一阶段完成后：
 
 ```bash
 git add .
@@ -772,87 +1184,106 @@ git commit -m "完成交换申请模块"
 git push origin master
 ```
 
+Git 提交完成后，第一阶段正式结束。
+
 ------
 
-# 十六、后续项目路线
+# 二十四、下一阶段：数据分析
 
-## 阶段一：后端基础
+下一阶段不直接进入复杂 AI。
+
+首先利用当前项目已经产生的数据进行数据分析。
+
+整体路线：
 
 ```text
-FastAPI
-SQLAlchemy
 MySQL
-Pydantic
-JWT
-bcrypt
-```
-
-状态：
-
-```text
-基本完成
-```
-
-------
-
-## 阶段二：核心业务
-
-```text
-User
-Item
-Swap
-```
-
-当前：
-
-```text
-User       ✅
-Item       ✅
-Swap       🔄
-```
-
-------
-
-## 阶段三：数据分析
-
-使用真实业务数据：
-
-```text
-NumPy
+ ↓
+读取真实业务数据
+ ↓
 Pandas
-Matplotlib
-Seaborn
+ ↓
+数据清洗
+ ↓
+数据统计
+ ↓
+Matplotlib / Seaborn
+ ↓
+业务分析
 ```
 
-分析内容例如：
+------
+
+## 计划分析的数据
+
+### 用户数据
+
+例如：
 
 ```text
 用户数量
-物品分类分布
-物品价格分布
-交换次数
-热门物品类别
+用户注册情况
 用户活跃度
+```
+
+### 物品数据
+
+例如：
+
+```text
+物品数量
+物品分类分布
+不同分类的数量
+价格分布
+不同用户发布物品数量
+```
+
+### 交换数据
+
+例如：
+
+```text
+交换申请数量
+pending 数量
+accepted 数量
+rejected 数量
 交换成功率
+不同分类的交换次数
 ```
 
 ------
 
-## 阶段四：机器学习
+# 二十五、机器学习阶段
 
-使用项目真实数据进行：
+数据分析完成后进入机器学习。
+
+计划使用：
 
 ```text
-特征工程
-↓
 scikit-learn
-↓
-KNN
-↓
-物品推荐 / 相似物品
 ```
 
-数据量足够后再考虑：
+首先从比较容易理解的：
+
+```text
+KNN
+```
+
+开始。
+
+目标：
+
+```text
+用户喜欢什么
+      ↓
+物品特征
+      ↓
+计算相似度
+      ↓
+推荐相似物品
+```
+
+之后再根据实际数据规模决定是否使用：
 
 ```text
 XGBoost
@@ -860,43 +1291,63 @@ XGBoost
 
 ------
 
-## 阶段五：NLP / LLM
+# 二十六、NLP / Embedding 阶段
 
-对用户自然语言描述的物品进行：
+后续对物品描述进行文本处理。
+
+例如用户发布：
 
 ```text
-文本清洗
-↓
-关键词 / 属性提取
-↓
+九成新苹果无线耳机，想换一个机械键盘
+```
+
+可以逐步提取：
+
+```text
+物品：
+无线耳机
+
+品牌：
+苹果
+
+成色：
+九成新
+
+类别：
+数码
+
+交换意向：
+机械键盘
+```
+
+进一步：
+
+```text
+文本
+ ↓
 Embedding
-↓
-语义相似度
-↓
-智能匹配
+ ↓
+向量
+ ↓
+相似度计算
+ ↓
+寻找语义相似的物品
 ```
 
-例如用户输入：
-
-```text
-“九成新苹果无线耳机，想换一个机械键盘”
-```
-
-系统提取：
-
-```text
-类别：数码
-物品：无线耳机
-品牌：苹果
-成色：九成新
-交换意向：机械键盘
-```
+最终实现更智能的交换匹配。
 
 ------
 
-## 阶段六：LangChain / LangGraph
+# 二十七、LangChain / LangGraph 阶段
 
-加入：
+后续将项目接入：
+
+```text
+LangChain
+LangGraph
+```
+
+计划实现：
 
 ```text
 Tool
@@ -906,27 +1357,40 @@ Memory
 Workflow
 ```
 
-实现例如：
+最终可以实现：
 
 ```text
 智能交换助手
 ```
 
-可以帮助用户：
+例如：
 
 ```text
-查询物品
-分析物品
-寻找合适交换对象
-推荐相似物品
-回答平台相关问题
+用户：
+帮我找适合拿耳机交换的机械键盘
+
+        ↓
+
+AI 查询物品数据库
+
+        ↓
+
+分析用户物品
+
+        ↓
+
+Embedding / 相似度匹配
+
+        ↓
+
+推荐交换对象
 ```
 
 ------
 
-## 阶段七：工程化
+# 二十八、工程化阶段
 
-加入：
+后续加入：
 
 ```text
 Redis
@@ -936,65 +1400,200 @@ Linux
 Nginx
 ```
 
-最终形成：
+逐步学习：
 
 ```text
+缓存
+消息队列
+异步任务
+容器化
+Linux 部署
+反向代理
+系统架构
+```
+
+最终目标类似：
+
+```text
+                Nginx
+                  ↓
+               FastAPI
+              ↙       ↘
+           Redis     MySQL
+              ↓
+          RabbitMQ
+              ↓
+        AI / ML 服务
+```
+
+具体架构等项目实际发展到该阶段后再决定。
+
+------
+
+# 二十九、最终项目路线
+
+整体路线：
+
+```text
+第一阶段
 FastAPI
-   ↓
-Nginx
-   ↓
-Redis
-   ↓
-RabbitMQ
-   ↓
+SQLAlchemy
 MySQL
-   ↓
-AI / ML 服务
+JWT
+bcrypt
+CRUD
+        ↓
+第二阶段
+用户
+物品
+交换
+权限控制
+业务状态
+        ↓
+第三阶段
+Pandas
+NumPy
+Matplotlib
+Seaborn
+数据分析
+        ↓
+第四阶段
+scikit-learn
+KNN
+推荐系统
+        ↓
+第五阶段
+NLP
+Embedding
+语义匹配
+        ↓
+第六阶段
+LangChain
+LangGraph
+RAG
+Memory
+Agent
+        ↓
+第七阶段
+Redis
+RabbitMQ
+Docker
+Linux
+Nginx
+        ↓
+最终
+AI + 后端 + 数据分析 + 机器学习
+综合项目
 ```
 
 ------
 
-# 十七、项目最终目标
+# 三十、后续开发原则
 
-最终项目不只是：
+继续开发时：
+
+1. **不重新设计已经完成的功能。**
+2. 每次只实现一个小功能。
+3. 修改前先说明为什么修改。
+4. 基于当前代码继续开发。
+5. 不一次性重写整个项目。
+6. 出现 Bug 时先解释原因，再修改。
+7. 每完成一个功能都进行测试。
+8. 功能稳定后再 Git commit。
+9. 暂时不进行不必要的架构重构。
+10. 后续学习的技术尽量与这个物换物项目结合。
+11. 不为了“堆技术”而加入 Redis、RabbitMQ、AI 等组件。
+12. 先理解基础原理，再把技术真正用到项目业务中。
+
+------
+
+# 三十一、当前结论
+
+截至 **2026-09-04**：
 
 ```text
-登录
-CRUD
+第一阶段：完成 ✅
 ```
 
-而是：
+当前项目已经从单纯的：
 
 ```text
-用户
- ↓
-发布物品
- ↓
-浏览物品
- ↓
+FastAPI CRUD
+```
+
+发展为：
+
+```text
+用户认证
+    ↓
+物品管理
+    ↓
 交换申请
- ↓
+    ↓
 权限控制
- ↓
+    ↓
 交换状态管理
- ↓
-数据分析
- ↓
-机器学习推荐
- ↓
-NLP物品理解
- ↓
-Embedding语义匹配
- ↓
-LangChain / LangGraph AI助手
- ↓
-Redis / RabbitMQ
- ↓
-Docker + Linux + Nginx部署
+    ↓
+物品状态管理
 ```
 
-最终形成一个可以用于：
+核心交换流程已经闭环：
 
-> **简历 + GitHub + 面试讲解**
+```text
+pending
+   ↓
+accepted / rejected
+```
 
-的完整 AI + 后端综合项目。
+其中接受交换后：
+
+```text
+双方物品
+   ↓
+unavailable
+```
+
+因此已经具备一个基本真实业务系统的雏形。
+
+------
+
+# 三十二、当前下一步
+
+**下一阶段从数据分析开始。**
+
+第一步计划：
+
+```text
+从 MySQL 读取当前物换物平台的数据
+        ↓
+使用 Pandas 转换成 DataFrame
+        ↓
+查看用户、物品、交换数据
+        ↓
+进行第一批基础统计
+```
+
+暂时不急着加入：
+
+```text
+Redis
+RabbitMQ
+LangChain
+LangGraph
+```
+
+先把：
+
+```text
+后端业务
+   ↓
+真实数据
+   ↓
+数据分析
+   ↓
+机器学习
+   ↓
+AI
+```
+
+这条路线真正跑通。

@@ -257,6 +257,7 @@ def delete_item(item_id:int,current_user:User = Depends(get_current_user)):
         'messages': '删除成功'
     }
 
+# 交换申请接口
 @app.post('/swaps')
 def create_swap(swap:SwapCreat,current_user:User=Depends(get_current_user)):
     db = SessionLocal()
@@ -288,6 +289,22 @@ def create_swap(swap:SwapCreat,current_user:User=Depends(get_current_user)):
             detail='不能拿别人的物品进行交换'
         )
 
+    # 自己没有的物品也不能进行交换
+    if offered_item.status != 'available':
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail='您提供的物品已经无法进行交换'
+        )
+
+    # 检查目标物品是否已交换出去了
+    if target_item.status != 'available':
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail='目标物品已无法进行交换'
+        )
+
     # 不能拿自己的物品和自己的物品进行交换
     if target_item.user_id == current_user.id:
         db.close()
@@ -314,6 +331,7 @@ def create_swap(swap:SwapCreat,current_user:User=Depends(get_current_user)):
         'status':new_swap.status
     }
 
+# 查询交换
 @app.get('/swaps')
 def get_swaps(current_user:User=Depends(get_current_user)):
     db = SessionLocal()
@@ -345,8 +363,137 @@ def get_swaps(current_user:User=Depends(get_current_user)):
     return result
 
 
+# 添加接受窗口
+@app.put('/swaps/{swap_id}/accept')
+def accept_swap(swap_id:int,current_user:User=Depends(get_current_user)):
+    db = SessionLocal()
+
+    # 查询交换申请
+    swap = db.query(Swap).filter(
+        Swap.id == swap_id
+    ).first()
+
+    # 交换申请不存在
+    if not swap:
+        db.close()
+        return {'messages':'交换申请不存在'}
+
+    # 只有 pending 状态才能接受
+    if swap.status != 'pending':
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail='该交换申请已经处理过了'
+        )
+
+    # 查询目标物品
+    target_item = db.query(Items).filter(
+        Items.id == swap.target_item_id
+    ).first()
+
+    # 查询对方想要交换物品
+    offered_item = db.query(Items).filter(
+        Items.id == swap.offered_item_id
+    ).first()
+
+    # 检查对方想要交换的物品是否还存在
+    if not offered_item:
+        db.close()
+        return {'messages': '对方想要交换的物品不存在'}
+
+    # 目标物品不存在
+    if not target_item:
+        db.close()
+        return {'messages':'目标物品不存在'}
+
+    # 只有目标物品的主人才能接受
+    if target_item.user_id != current_user.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail='无权接受此交换'
+        )
+
+    # 修改交换状态
+    swap.status = 'accepted'
+
+    target_item.status = 'unavailable'
+    offered_item.status = 'unavailable'
+
+    db.commit()
+    db.refresh(swap)
+    db.close()
+
+    return {
+        'messages':'交换申请已接受',
+        'swap_id':swap.id,
+        'status':swap.status
+    }
 
 
+# 添加拒绝窗口
+@app.put('/swaps/{swap_id}/reject')
+def reject_swap(swap_id:int,current_user:User=Depends(get_current_user)):
+    db = SessionLocal()
+
+    # 查询交换申请
+    swap = db.query(Swap).filter(
+        Swap.id == swap_id
+    ).first()
+
+    # 交换申请不存在
+    if not swap:
+        db.close()
+        return {'messages':'交换申请不存在'}
+
+    # 只有 pending 状态才能拒绝
+    if swap.status != 'pending':
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail='该交换申请已经处理过了'
+        )
+
+    # 查询对方想要的物品
+    target_item = db.query(Items).filter(
+        Items.id == swap.target_item_id
+    ).first()
+
+    # 查询对方想要交换物品
+    offered_item = db.query(Items).filter(
+        Items.id == swap.offered_item_id
+    ).first()
+
+    # 检查对方想要交换的物品是否还存在
+    if not offered_item:
+        db.close()
+        return {'messages':'对方想要交换的物品不存在'}
+
+    # 目标物品不存在
+    if not target_item:
+        db.close()
+        return {'messages':'目标物品不存在'}
+
+    # 只有目标物品的主人才能接受
+    if target_item.user_id != current_user.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail='无权拒绝此交换'
+        )
+
+    # 修改交换状态
+    swap.status = 'rejected'
+
+    db.commit()
+    db.refresh(swap)
+    db.close()
+
+    return {
+        'messages':'交换申请已拒绝',
+        'swap_id':swap.id,
+        'status':swap.status
+    }
 
 if __name__ == '__main__':
     uvicorn.run('main:app')

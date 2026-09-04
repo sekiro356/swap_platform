@@ -36,8 +36,8 @@ def get_current_user(credentials : HTTPAuthorizationCredentials = Depends(securi
 
     token = credentials.credentials
 
-    print('收到 Token:',token)
-    print('当前SECRET_KEY:',SECRET_KEY)
+    # print('收到 Token:',token)
+    # print('当前SECRET_KEY:',SECRET_KEY)
 
     try:
         # 解码 JWT
