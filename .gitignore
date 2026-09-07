@@ -1,6 +1,7 @@
 .env
 chatgpt提示.txt
 技术.txt
+review
 
 # Python 缓存
 __pycache__/

@@ -1,235 +1,67 @@
-# 物换物平台（swap_platform）项目上下文
+# AI 智能以物换物平台 - PROJECT_CONTEXT
 
-## 一、项目简介
+## 1. 项目基本信息
 
-项目名称：`swap_platform`
+- GitHub 仓库：`https://github.com/sekiro356/swap_platform.git`
+- 分支：`master`
+- 项目名称：AI 智能以物换物平台
+- 后端：FastAPI
+- 数据库：MySQL
+- ORM：SQLAlchemy
+- 密码：bcrypt
+- 登录认证：JWT / PyJWT
+- 请求认证：HTTPBearer
+- 数据分析：Python + Pandas + Matplotlib + Seaborn
+- 后续推荐：scikit-learn / KNN
+- 后续 AI：Embedding、LangChain、LangGraph、RAG、Memory、Agent
 
-项目目标：开发一个完整的“以物换物平台”后端项目，并逐步加入：
+原则：
 
-- 数据分析
-- 机器学习
-- NLP / LLM
-- Embedding
-- LangChain / LangGraph
-- Redis
-- RabbitMQ
-- Docker
-- Linux
-- Nginx
+> 继续在现有项目上开发，不重新设计项目，不随意重构已有代码。
 
-项目定位：
-
-> 从基础 FastAPI CRUD 项目逐步升级为具备真实业务逻辑、权限控制、数据分析、机器学习和 AI 能力的综合项目。
-
-最终用于：
-
-- 项目实践
-- 技术学习
-- GitHub 展示
-- 简历项目
-- 面试项目介绍
-
-------
-
-# 二、当前项目阶段
-
-截至 **2026-09-04**：
-
-```text
-第一阶段：FastAPI 后端基础 + 核心交换业务
-状态：基本完成
-```
-
-目前已经完成：
-
-```text
-用户
-├── 注册
-├── 登录
-├── bcrypt 密码哈希
-├── JWT 身份认证
-└── 当前用户查询
-
-物品
-├── 发布
-├── 查询全部
-├── 查询单个
-├── 修改
-├── 删除
-└── 物品状态管理
-
-交换
-├── 发起交换
-├── 查询交换
-├── 接受交换
-├── 拒绝交换
-├── 权限控制
-├── 状态控制
-└── 交换完成后锁定双方物品
-```
-
-第一阶段已经完成，不需要继续扩展基础交换功能。
-
-下一阶段进入：
-
-```text
-数据分析
-```
-
-------
-
-# 三、当前技术栈
-
-## 后端
-
-- Python
-- FastAPI
-- Uvicorn
-- Pydantic
-- SQLAlchemy
-- MySQL
-
-## 用户认证
-
-- bcrypt
-- JWT
-- PyJWT
-- HTTPBearer
-
-## 后续计划
-
-- NumPy
-- Pandas
-- Matplotlib
-- Seaborn
-- scikit-learn
-- KNN
-- XGBoost
-- NLP
-- Embedding
-- 向量数据库 / pgvector
-- LangChain
-- LangGraph
-- Redis
-- RabbitMQ
-- Docker
-- Linux
-- Nginx
-
-------
-
-# 四、当前项目结构
-
-```text
-swap_platform/
-├── .gitignore
-├── requirements.txt
-├── requirements_full.txt
-├── backend/
-│   ├── main.py
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── auth.py
-│   └── routers/
-│       ├── users.py
-│       ├── items.py
-│       └── swaps.py
-├── frontend/
-└── PROJECT_CONTEXT.md
-```
-
-目前主要业务代码仍然集中在：
-
-```text
-backend/main.py
-```
-
-暂时不要进行大规模重构。
-
-等核心功能和数据分析完成后，再根据实际需要逐步拆分。
-
-------
-
-# 五、数据库
-
-当前数据库：
+当前主要目标：
 
 ```text
 MySQL
-```
-
-ORM：
-
-```text
+  ↓
 SQLAlchemy
+  ↓
+Python
+  ↓
+Pandas
+  ↓
+数据清洗
+  ↓
+数据统计
+  ↓
+Matplotlib / Seaborn
+  ↓
+业务分析
+  ↓
+用户行为数据
+  ↓
+KNN 推荐
 ```
-
-数据库连接通过 `.env` 中的：
-
-```text
-DATABASE_URL
-```
-
-配置。
-
-`database.py` 主要提供：
-
-```python
-engine
-SessionLocal
-Base
-```
-
-启动时：
-
-```python
-Base.metadata.create_all(bind=engine)
-```
-
-用于创建不存在的数据库表。
-
-注意：
-
-> `Base.metadata.create_all()` 只负责创建不存在的表，不会自动修改已经存在的表结构。
-
-因此以后给已有表增加字段，需要通过 SQL：
-
-```sql
-ALTER TABLE ...
-```
-
-同步数据库结构。
 
 ------
 
-# 六、当前数据库模型
+# 2. 已完成的核心业务
 
-## 1. User 用户表
+目前 FastAPI + MySQL 的核心业务已经基本完成。
 
-主要字段：
+## 用户
 
-```text
-id
-username
-password
-```
+已经实现：
 
-密码使用 bcrypt 哈希保存。
+- 用户注册
+- 用户登录
+- 获取当前用户
+- JWT 身份认证
+- bcrypt 密码哈希
 
-数据库中：
+## 物品
 
-```text
-password ≠ 明文密码
-```
-
-而是 bcrypt 生成的哈希字符串。
-
-------
-
-# 七、Items 物品表
-
-模型：
+`items` 表核心字段：
 
 ```python
 class Items(Base):
@@ -240,82 +72,30 @@ class Items(Base):
     description = Column(String(1000), nullable=False)
     category = Column(String(50), nullable=False)
     price = Column(Integer, nullable=False)
-
     user_id = Column(Integer, nullable=False)
-
     status = Column(String(20), nullable=False, default='available')
 ```
 
-字段：
-
-```text
-id
-    物品 ID
-
-name
-    物品名称
-
-description
-    物品描述
-
-category
-    物品分类
-
-price
-    物品价格
-
-user_id
-    物品发布者
-
-status
-    当前物品是否还能参与交换
-```
-
-------
-
-## Items.status
-
-当前使用：
+物品状态：
 
 ```text
 available
 unavailable
 ```
 
-含义：
+已经实现：
 
-```text
-available
-    可以参与交换
-
-unavailable
-    已经交换完成，不能再次参与交换
-```
-
-数据库已经同步增加：
-
-```sql
-status VARCHAR(20) NOT NULL DEFAULT 'available'
-```
-
-新发布物品默认：
-
-```text
-available
-```
+- 创建物品
+- 查询物品
+- 修改物品
+- 删除物品
+- 物品状态控制
 
 ------
 
-# 八、Swap 交换申请表
+# 3. 交换业务
 
-模型：
-
-```python
-class Swap(Base):
-    __tablename__ = 'swap'
-```
-
-字段：
+`swap` 核心字段：
 
 ```text
 id
@@ -325,23 +105,32 @@ offered_item_id
 status
 ```
 
-含义：
+字段含义：
 
 ```text
 requester_id
     发起交换的用户
 
 target_item_id
-    发起者想要的物品
+    发起者想要获得的物品
 
 offered_item_id
-    发起者拿出来交换的物品
-
-status
-    当前交换申请状态
+    发起者拿出来交换的自己的物品
 ```
 
-当前状态：
+例如：
+
+```text
+用户 A：
+拿自己的“数码产品”
+交换
+用户 B 的“书”
+
+category_offered = 数码
+category_target = 书
+```
+
+交换状态：
 
 ```text
 pending
@@ -349,1251 +138,1016 @@ accepted
 rejected
 ```
 
-流程：
+已经实现：
 
-```text
-pending
-   ↓
-   ├── accepted
-   │
-   └── rejected
-```
-
-------
-
-# 九、用户认证模块
-
-## 1. 注册
-
-接口：
-
-```http
-POST /register
-```
-
-流程：
-
-```text
-用户名 + 密码
-       ↓
-查询用户名是否存在
-       ↓
-bcrypt 哈希密码
-       ↓
-创建 User
-       ↓
-保存数据库
-       ↓
-返回注册成功
-```
+- 创建交换请求
+- 查询交换记录
+- 接受交换
+- 拒绝交换
+- 权限检查
+- 状态检查
+- 交换成功后锁定双方物品
 
 ------
 
-## 2. 登录
+# 4. 当前开发阶段：Week 2 数据分析
 
-接口：
+当前没有继续开发新业务，而是在已有数据库基础上做数据分析。
 
-```http
-POST /login
-```
+目标：
 
-流程：
+> 从真实业务数据中分析用户、物品、交换行为，为后面的推荐系统准备数据。
+
+当前分析文件：
 
 ```text
-用户名 + 密码
-       ↓
-查询用户
-       ↓
-bcrypt.checkpw()
-       ↓
-密码正确
-       ↓
-create_access_token(user_id)
-       ↓
-返回 JWT
+backend/analysis.py
 ```
 
-------
-
-## 3. 当前用户
-
-接口：
-
-```http
-GET /me
-```
-
-使用：
+目前代码采用：
 
 ```python
-Depends(get_current_user)
+db = SessionLocal()
+...
+db.close()
 ```
 
-获取当前用户。
+暂时不进行 `get_db()` 等结构重构。
 
-因此：
+------
+
+# 5. analysis.py 当前数据读取
 
 ```python
-current_user.id
+import pandas as pd
+from models import User, Items, Swap
+from database import SessionLocal
+
+db = SessionLocal()
+
+users = db.query(User).all()
+
+df_user = pd.DataFrame([
+    {
+        'id': user.id,
+        'username': user.username
+    }
+    for user in users
+])
+
+items = db.query(Items).all()
+
+df_items = pd.DataFrame([
+    {
+        'id': item.id,
+        'name': item.name,
+        'category': item.category,
+        'price': item.price,
+        'user_id': item.user_id,
+        'status': item.status
+    }
+    for item in items
+])
+
+swaps = db.query(Swap).all()
+
+df_swaps = pd.DataFrame([
+    {
+        'id': swap.id,
+        'requester_id': swap.requester_id,
+        'target_item_id': swap.target_item_id,
+        'offered_item_id': swap.offered_item_id,
+        'status': swap.status
+    }
+    for swap in swaps
+])
+
+db.close()
 ```
 
-就是当前登录用户 ID。
-
-------
-
-# 十、JWT 认证
-
-`auth.py` 使用：
-
-```text
-HTTPBearer
-```
-
-请求头：
-
-```text
-Authorization: Bearer <JWT>
-```
-
-JWT 中包含：
-
-```text
-user_id
-exp
-```
-
-通过：
+曾经出现：
 
 ```python
-get_current_user()
+users = db.query(User).all
 ```
 
-解析 token，并查询数据库中的 User。
+错误：
+
+```text
+TypeError: 'method' object is not iterable
+```
+
+原因：
+
+```text
+.all
+```
+
+是方法本身。
+
+```text
+.all()
+```
+
+才是调用方法并获取查询结果。
 
 ------
 
-# 十一、Swagger
+# 6. 基础数据统计
 
-开发测试地址：
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Swagger 中点击：
-
-```text
-Authorize
-```
-
-输入：
-
-```text
-JWT_TOKEN
-```
-
-不需要手动输入：
-
-```text
-Bearer JWT_TOKEN
-```
-
-因为 `HTTPBearer` 会自动处理。
-
-------
-
-# 十二、物品模块
-
-## 1. 发布物品
-
-```http
-POST /items
-```
-
-需要 JWT。
-
-创建物品时：
+已经完成：
 
 ```python
-user_id=current_user.id
+print('\n用户数量: ', len(df_user))
+print('\n物品数量: ', len(df_items))
+print('\n交换记录数量: ', len(df_swaps))
+
+print(df_items['category'].value_counts())
+print(df_swaps['status'].value_counts())
 ```
 
-因此用户无法通过请求体伪造物品所有者。
-
-新物品默认：
+可以统计：
 
 ```text
-status = available
+用户数量
+物品数量
+交换记录数量
+不同物品类别数量
+不同交换状态数量
 ```
 
 ------
 
-## 2. 查询全部物品
+# 7. 用户拥有物品数量
 
-```http
-GET /items
-```
-
-不需要 JWT。
-
-------
-
-## 3. 查询单个物品
-
-```http
-GET /items/{item_id}
-```
-
-不需要 JWT。
-
-------
-
-## 4. 修改物品
-
-```http
-PUT /items/{item_id}
-```
-
-需要 JWT。
-
-只有：
+已经完成：
 
 ```python
-db_item.user_id == current_user.id
+item_count = (
+    df_items
+    .groupby('user_id')
+    .size()
+    .reset_index(name='item_count')
+)
 ```
 
-才能修改。
+然后与用户表合并：
 
-否则：
+```python
+df_user_analysis = df_user.merge(
+    item_count,
+    left_on='id',
+    right_on='user_id',
+    how='left'
+)
+```
+
+处理没有物品的用户：
+
+```python
+df_user_analysis['item_count'] = (
+    df_user_analysis['item_count']
+    .fillna(0)
+    .astype(int)
+)
+```
+
+已经理解：
+
+### groupby
+
+```python
+df_items.groupby('user_id')
+```
+
+按照用户 ID 分组。
+
+### size
+
+```python
+.size()
+```
+
+统计每组有多少条记录。
+
+### reset_index
+
+```python
+.reset_index(name='item_count')
+```
+
+把分组结果重新变成 DataFrame，并给统计结果命名。
+
+### merge
+
+用于把不同 DataFrame 的数据连接起来。
+
+### how='left'
+
+表示：
+
+> 左边 DataFrame 的数据全部保留。
+
+所以没有物品的用户也会保留下来，然后：
+
+```python
+NaN → 0
+```
+
+------
+
+# 8. 用户交换次数
+
+已经完成：
+
+```python
+user_swap_count = (
+    df_swaps
+    .groupby('requester_id')
+    .size()
+    .reset_index(name='swap_count')
+)
+```
+
+含义：
+
+> 统计每个用户发起了多少次交换。
+
+------
+
+# 9. 用户成功交换次数
+
+已经完成：
+
+```python
+user_accepted_count = (
+    df_swaps[df_swaps['status'] == 'accepted']
+    .groupby('requester_id')
+    .size()
+    .reset_index(name='accepted_count')
+)
+```
+
+其中：
+
+```python
+df_swaps['status'] == 'accepted'
+```
+
+得到的是一个布尔 Series。
+
+例如：
 
 ```text
-403
-无权限修改此物品
+True
+False
+True
+False
+```
+
+然后：
+
+```python
+.sum()
+```
+
+可以统计 True 的数量。
+
+------
+
+# 10. 用户交换行为分析
+
+先合并交换次数和成功次数：
+
+```python
+user_swap_analysis = user_swap_count.merge(
+    user_accepted_count,
+    on='requester_id',
+    how='left'
+)
+```
+
+处理没有成功交换的用户：
+
+```python
+user_swap_analysis['accepted_count'] = (
+    user_swap_analysis['accepted_count']
+    .fillna(0)
+    .astype(int)
+)
+```
+
+计算成功率：
+
+```python
+user_swap_analysis['success_rate'] = (
+    user_swap_analysis['accepted_count']
+    / user_swap_analysis['swap_count']
+)
+```
+
+当前测试数据类似：
+
+```text
+requester_id    swap_count    accepted_count    success_rate
+
+2               1             1                 1
+3               1             0                 0
+5               1             0                 0
+```
+
+注意：
+
+目前每个用户的交换次数还比较少，因此成功率暂时只能作为演示分析，不能作为可靠的用户画像。
+
+------
+
+# 11. 用户名合并
+
+把 requester_id 对应到用户名：
+
+```python
+user_swap_analysis = user_swap_analysis.merge(
+    df_user[['id', 'username']],
+    left_on='requester_id',
+    right_on='id',
+    how='left'
+)
+
+user_swap_analysis = user_swap_analysis.drop(columns='id')
+```
+
+理解：
+
+```text
+requester_id
+     ↓
+User.id
+     ↓
+username
 ```
 
 ------
 
-## 5. 删除物品
+# 12. 最终用户行为表
 
-```http
-DELETE /items/{item_id}
+已经将：
+
+```text
+用户信息
++
+物品数量
++
+交换次数
++
+成功交换次数
++
+交换成功率
 ```
 
-需要 JWT。
+合并成：
 
-同样只有物品所有者可以删除。
+```python
+user_behavior = df_user_analysis.merge(
+    user_swap_analysis[
+        ['requester_id', 'swap_count', 'accepted_count', 'success_rate']
+    ],
+    left_on='id',
+    right_on='requester_id',
+    how='left'
+)
+```
+
+处理空值：
+
+```python
+user_behavior['swap_count'] = (
+    user_behavior['swap_count']
+    .fillna(0)
+    .astype(int)
+)
+
+user_behavior['accepted_count'] = (
+    user_behavior['accepted_count']
+    .fillna(0)
+    .astype(int)
+)
+
+user_behavior['success_rate'] = (
+    user_behavior['success_rate']
+    .fillna(0)
+)
+```
+
+当前数据结构类似：
+
+```text
+id    username    item_count    swap_count    accepted_count    success_rate
+
+2     老王        ...           1             1                 1
+3     小明        ...           1             0                 0
+4     佐助        ...           0             0                 0
+5     鸣人        ...           1             0                 0
+```
+
+其中：
+
+```text
+佐助没有交换记录
+```
+
+但因为使用：
+
+```python
+how='left'
+```
+
+所以用户仍然保留，只是交换相关数据为空，之后填成 0。
 
 ------
 
-# 十三、交换模块
+# 13. 交换类别关系分析
 
-交换模块目前已经完成。
+目标：
+
+> 分析用户拿什么类别的物品，去交换什么类别的物品。
+
+首先根据：
+
+```text
+target_item_id
+```
+
+找到目标物品类别。
+
+```python
+swap_analysis = df_swaps.merge(
+    df_items[['category', 'id']],
+    left_on='target_item_id',
+    right_on='id',
+    how='left'
+)
+```
+
+然后根据：
+
+```text
+offered_item_id
+```
+
+找到提供物品类别：
+
+```python
+swap_analysis = swap_analysis.merge(
+    df_items[['category', 'id']],
+    left_on='offered_item_id',
+    right_on='id',
+    how='left',
+    suffixes=('_target', '_offered')
+)
+```
+
+这里必须进行两次 merge。
+
+原因：
+
+```text
+target_item_id
+        ↓
+目标物品
+        ↓
+category_target
+
+offered_item_id
+        ↓
+提供物品
+        ↓
+category_offered
+```
+
+两个 ID 不一样，因此需要分别查询 `df_items`。
 
 ------
 
-## 1. 发起交换
+# 14. left_on / right_on
 
-接口：
+已经重点理解：
 
-```http
-POST /swaps
+```python
+left_on='target_item_id'
+right_on='id'
 ```
 
-请求：
+意思：
 
-```json
-{
-    "target_item_id": 8,
-    "offered_item_id": 3
-}
+```text
+左边 DataFrame：
+target_item_id
+
+        ↕ 匹配
+
+右边 DataFrame：
+id
+```
+
+也就是：
+
+```text
+target_item_id = Items.id
+```
+
+第二次：
+
+```python
+left_on='offered_item_id'
+right_on='id'
+```
+
+也就是：
+
+```text
+offered_item_id = Items.id
+```
+
+`right_on` 两次都是：
+
+```python
+'id'
+```
+
+因为右边的 `df_items` 主键都是 `id`。
+
+------
+
+# 15. 交换类别关系统计
+
+已经完成：
+
+```python
+swap_relation = (
+    swap_analysis
+    .groupby(['category_offered', 'category_target'])
+    .size()
+    .reset_index(name='swap_count')
+)
+```
+
+当前测试数据得到过：
+
+```text
+category_target    category_offered    swap_count
+
+书                 数码                1
+数码               数码                2
 ```
 
 含义：
 
 ```text
-target_item_id
-    我想要的物品
+数码 → 书
+发生 1 次
 
-offered_item_id
-    我提供的物品
+数码 → 数码
+发生 2 次
 ```
 
-后端自动确定：
+------
+
+# 16. 交换类别比例
+
+已经完成：
 
 ```python
-requester_id = current_user.id
+swap_relation['ratio'] = (
+    swap_relation['swap_count']
+    / swap_relation['swap_count'].sum()
+)
 ```
 
-新申请：
+得到过：
 
 ```text
-status = pending
+数码 → 书       0.333333
+数码 → 数码     0.666667
+```
+
+也就是：
+
+```text
+数码 → 书       33.33%
+数码 → 数码     66.67%
+```
+
+这个分析比单纯计算平均价格更有业务意义。
+
+目前暂时不重点做：
+
+```text
+所有物品平均价格
+```
+
+因为不同类别之间价格差异较大，直接求平均容易得到没有业务意义的结论。
+
+当前更关注：
+
+```text
+用户行为
+类别偏好
+交换关系
+交换成功情况
 ```
 
 ------
 
-# 十四、发起交换时的业务校验
+# 17. Matplotlib 可视化
 
-目前已经实现以下检查。
+已经开始使用 Matplotlib。
 
-## 1. 目标物品必须存在
+中文显示设置：
 
 ```python
-if not target_item:
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 ```
 
-------
-
-## 2. 自己提供的物品必须存在
+如果电脑没有微软雅黑，可以尝试：
 
 ```python
-if not offered_item:
+plt.rcParams['font.sans-serif'] = ['SimHei']
 ```
 
 ------
 
-## 3. 不能拿别人的物品交换
+# 18. 用户物品数量图
+
+已经完成：
 
 ```python
-if offered_item.user_id != current_user.id:
-```
+plt.bar(
+    user_behavior['username'],
+    user_behavior['item_count']
+)
 
-返回：
+plt.xlabel('用户')
+plt.ylabel('物品数量')
+plt.title('每个用户的物品数量')
 
-```text
-403
-不能拿别人的物品进行交换
+plt.show()
 ```
 
 ------
 
-## 4. 自己提供的物品必须是 available
+# 19. 用户交换次数图
+
+已经完成：
 
 ```python
-if offered_item.status != 'available':
-```
+plt.bar(
+    user_behavior['username'],
+    user_behavior['swap_count']
+)
 
-返回：
+plt.xlabel('用户')
+plt.ylabel('交换次数')
+plt.title('用户交换次数')
 
-```text
-400
-您提供的物品已经无法进行交换
+plt.show()
 ```
 
 ------
 
-## 5. 目标物品必须是 available
+# 20. 两个指标放在一张图
+
+目前正在学习分组柱状图。
+
+代码：
 
 ```python
-if target_item.status != 'available':
+x = range(len(user_behavior['username']))
+
+plt.bar(
+    [i - 0.2 for i in x],
+    user_behavior['item_count'],
+    width=0.4,
+    label='物品数量'
+)
+
+plt.bar(
+    [i + 0.2 for i in x],
+    user_behavior['swap_count'],
+    width=0.4,
+    label='交换次数'
+)
+
+plt.xticks(x, user_behavior['username'])
+plt.xlabel('用户')
+plt.ylabel('数量')
+plt.title('用户物品数量与交换次数')
+plt.legend()
+
+plt.show()
 ```
 
-返回：
+核心理解：
 
 ```text
-400
-目标物品已无法进行交换
+x = [0, 1, 2, 3]
 ```
 
-------
+代表：
 
-## 6. 不能和自己的物品交换
+```text
+第1个用户 → 0
+第2个用户 → 1
+第3个用户 → 2
+第4个用户 → 3
+```
+
+如果两组柱子都直接使用：
 
 ```python
-if target_item.user_id == current_user.id:
+plt.bar(x, ...)
 ```
 
-返回：
+那么两个柱子会重叠。
 
-```text
-不能和自己的物品进行交换
-```
-
-------
-
-# 十五、查询交换申请
-
-接口：
-
-```http
-GET /swaps
-```
-
-需要 JWT。
-
-当前用户可以看到两类交换：
-
-```text
-① 当前用户发起的交换
-
-② 别人向当前用户物品发起的交换
-```
-
-核心查询：
+所以：
 
 ```python
-swaps = db.query(Swap).join(
-    Items,
-    Swap.target_item_id == Items.id
-).filter(
-    (Swap.requester_id == current_user.id) |
-    (Items.user_id == current_user.id)
-).all()
+[i - 0.2 for i in x]
 ```
 
-------
+把第一组柱子向左移动。
 
-# 十六、接受交换
-
-接口：
-
-```http
-PUT /swaps/{swap_id}/accept
-```
-
-接受流程：
-
-```text
-查询 Swap
-    ↓
-Swap 是否存在
-    ↓
-status 是否为 pending
-    ↓
-查询 target_item
-    ↓
-查询 offered_item
-    ↓
-两个物品是否存在
-    ↓
-当前用户是不是 target_item 主人
-    ↓
-检查两个物品是否还是 available
-    ↓
-Swap → accepted
-    ↓
-target_item → unavailable
-offered_item → unavailable
-    ↓
-commit
-```
-
-------
-
-## 接受权限
-
-只有：
-
-```text
-target_item.user_id == current_user.id
-```
-
-才能接受。
-
-否则：
-
-```text
-403
-无权接受此交换
-```
-
-------
-
-## 防止重复处理
-
-只有：
-
-```text
-pending
-```
-
-状态可以接受。
-
-如果已经：
-
-```text
-accepted
-```
-
-或者：
-
-```text
-rejected
-```
-
-再次处理：
-
-```text
-400
-该交换申请已经处理过了
-```
-
-------
-
-## 接受后锁定物品
-
-成功接受后：
+而：
 
 ```python
-swap.status = 'accepted'
-
-target_item.status = 'unavailable'
-offered_item.status = 'unavailable'
+[i + 0.2 for i in x]
 ```
 
-因此：
+把第二组柱子向右移动。
+
+`width=0.4` 是柱子的宽度。
+
+因为：
 
 ```text
-双方物品
-    ↓
-unavailable
+0.4 / 2 = 0.2
 ```
 
-不能再次发起交换。
+所以使用：
+
+```text
+左边：i - 0.2
+右边：i + 0.2
+```
+
+正好让两个宽度为 0.4 的柱子并排。
+
+例如：
+
+```text
+用户1中心位置 = 0
+
+        左柱        右柱
+         ↓           ↓
+       -0.2         +0.2
+         █           █
+         █           █
+         █           █
+-----------------------------→
+       物品数量     交换次数
+```
 
 ------
 
-# 十七、拒绝交换
+# 21. Matplotlib 用户太多的问题
 
-接口：
+已经讨论：
 
-```http
-PUT /swaps/{swap_id}/reject
-```
+如果用户很多，横坐标用户名会变得拥挤。
 
-只有目标物品主人可以拒绝。
-
-判断：
+问题不在：
 
 ```python
-target_item.user_id == current_user.id
+x = range(...)
 ```
 
-否则：
+而在：
 
 ```text
-403
-无权拒绝此交换
+用户数量太多
 ```
 
-只有：
+不建议做类似网页的“分页”。
+
+数据分析中更常见的是：
 
 ```text
-pending
+Top N
+排序
+筛选
 ```
 
-状态可以拒绝。
-
-拒绝后：
-
-```text
-pending
-   ↓
-rejected
-```
-
-**拒绝不会修改物品状态。**
-
-因为交换没有成功，所以双方物品仍然保持：
-
-```text
-available
-```
-
-可以继续参与其他交换。
-
-------
-
-# 十八、当前交换业务流程
-
-完整流程：
-
-```text
-用户 A
-  ↓
-发布物品 A
-  ↓
-用户 B
-  ↓
-发布物品 B
-  ↓
-A 发起交换申请
-  ↓
-pending
-  ↓
-B 查看申请
-  ↓
- ┌───────────────┐
- ↓               ↓
-接受             拒绝
- ↓               ↓
-accepted        rejected
- ↓
-A物品 unavailable
-B物品 unavailable
-```
-
-------
-
-# 十九、当前已经解决的业务漏洞
-
-目前已经增加了以下业务保护：
-
-```text
-✅ A 不能拿 B 的物品作为自己的交换物品
-
-✅ A 不能拿自己的物品和自己的物品交换
-
-✅ unavailable 物品不能再次发起交换
-
-✅ 只有目标物品主人才能接受
-
-✅ 只有目标物品主人才能拒绝
-
-✅ accepted 之后不能再次处理
-
-✅ rejected 之后不能再次处理
-
-✅ 接受交换后双方物品变成 unavailable
-
-✅ 接受交换前再次检查双方物品是否仍然 available
-```
-
-------
-
-# 二十、第一阶段测试
-
-交换模块需要覆盖以下测试。
-
-## 正常流程
-
-```text
-A 登录
- ↓
-A 发布物品 A
- ↓
-B 登录
- ↓
-B 发布物品 B
- ↓
-A 申请交换 B 的物品
- ↓
-pending
- ↓
-B 查询 /swaps
- ↓
-B 接受
- ↓
-accepted
- ↓
-A/B 两个物品 → unavailable
-```
-
-------
-
-## 拒绝流程
-
-```text
-A 发起交换
- ↓
-pending
- ↓
-B 拒绝
- ↓
-rejected
-```
-
-双方物品仍然：
-
-```text
-available
-```
-
-------
-
-## 非法流程
-
-测试：
-
-```text
-A 拿 B 的物品作为 offered_item
-```
-
-应该：
-
-```text
-403
-```
-
-测试：
-
-```text
-A 和自己的物品交换
-```
-
-应该拒绝。
-
-测试：
-
-```text
-A 使用 unavailable 物品发起交换
-```
-
-应该：
-
-```text
-400
-```
-
-测试：
-
-```text
-C 接受 A → B 的交换
-```
-
-应该：
-
-```text
-403
-```
-
-测试：
-
-```text
-C 拒绝 A → B 的交换
-```
-
-应该：
-
-```text
-403
-```
-
-测试：
-
-```text
-已经 accepted 的申请再次 accept
-```
-
-应该：
-
-```text
-400
-```
-
-测试：
-
-```text
-已经 rejected 的申请再次 reject
-```
-
-应该：
-
-```text
-400
-```
-
-------
-
-# 二十一、代码风格
-
-目前数据库操作仍然采用：
+例如取交换次数最高的前 10 个用户：
 
 ```python
-db = SessionLocal()
+top_users = (
+    user_behavior
+    .sort_values('swap_count', ascending=False)
+    .head(10)
+)
 ```
 
-操作完成：
+后续如果用户数量变多，可以继续做：
 
-```python
-db.close()
+```text
+Top 10 用户
+Top 20 用户
+按交换次数排序
+按物品数量排序
 ```
 
-暂时不进行：
-
-```python
-get_db()
-```
-
-等基础业务更加稳定后，再统一进行数据库依赖注入优化。
+而不是把所有用户全部画在一张图里。
 
 ------
 
-# 二十二、已遇到并解决的问题
+# 22. 当前已经掌握的 Pandas
 
-## SQLAlchemy Table 重复定义
-
-曾经出现：
+目前已经实际使用并理解：
 
 ```text
-sqlalchemy.exc.InvalidRequestError:
-Table 'users' is already defined for this MetaData instance.
+DataFrame
+Series
+groupby
+size
+reset_index
+merge
+left_on
+right_on
+how='left'
+fillna
+astype
+drop
+value_counts
+sort_values
+head
+```
+
+以及：
+
+```python
+df['column']
+```
+
+获取 DataFrame 某一列。
+
+已经遇到并解决：
+
+```python
+if not df_user_analysis['user_id']:
+```
+
+导致：
+
+```text
+ValueError:
+The truth value of a Series is ambiguous
 ```
 
 原因：
 
-同一个 models 文件被不同模块路径加载，例如同时使用：
+```text
+df['user_id']
+```
+
+得到的是整个 Series，不是一个单独的 True / False。
+
+------
+
+# 23. 当前已经掌握的 Matplotlib
+
+目前已经开始使用：
+
+```text
+plt.bar()
+plt.xlabel()
+plt.ylabel()
+plt.title()
+plt.xticks()
+plt.legend()
+plt.show()
+```
+
+并正在理解：
+
+```text
+x 位置
+bar width
+柱子左右偏移
+分组柱状图
+```
+
+特别是：
 
 ```python
-from backend.models import ...
+[i - 0.2 for i in x]
+[i + 0.2 for i in x]
 ```
 
-和：
-
-```python
-from models import ...
-```
-
-会导致 Python 可能将其当成不同模块加载。
-
-当前统一使用：
-
-```python
-from models import User, Items, Swap
-from database import engine, Base, SessionLocal
-from auth import create_access_token, get_current_user
-```
-
-不要混用：
-
-```python
-from backend.models import ...
-```
+本质上是在调整柱子的横坐标位置，让两组柱子并排显示。
 
 ------
 
-# 二十三、Git
+# 24. 当前项目阶段
 
-当前主分支：
-
-```text
-master
-```
-
-远程仓库：
+当前进度：
 
 ```text
-https://github.com/sekiro356/swap_platform.git
-```
-
-第一阶段完成后：
-
-```bash
-git add .
-git commit -m "完成交换申请模块"
-git push origin master
-```
-
-Git 提交完成后，第一阶段正式结束。
-
-------
-
-# 二十四、下一阶段：数据分析
-
-下一阶段不直接进入复杂 AI。
-
-首先利用当前项目已经产生的数据进行数据分析。
-
-整体路线：
-
-```text
-MySQL
- ↓
-读取真实业务数据
- ↓
-Pandas
- ↓
-数据清洗
- ↓
-数据统计
- ↓
-Matplotlib / Seaborn
- ↓
-业务分析
-```
-
-------
-
-## 计划分析的数据
-
-### 用户数据
-
-例如：
-
-```text
-用户数量
-用户注册情况
-用户活跃度
-```
-
-### 物品数据
-
-例如：
-
-```text
-物品数量
-物品分类分布
-不同分类的数量
-价格分布
-不同用户发布物品数量
-```
-
-### 交换数据
-
-例如：
-
-```text
-交换申请数量
-pending 数量
-accepted 数量
-rejected 数量
-交换成功率
-不同分类的交换次数
-```
-
-------
-
-# 二十五、机器学习阶段
-
-数据分析完成后进入机器学习。
-
-计划使用：
-
-```text
-scikit-learn
-```
-
-首先从比较容易理解的：
-
-```text
-KNN
-```
-
-开始。
-
-目标：
-
-```text
-用户喜欢什么
-      ↓
-物品特征
-      ↓
-计算相似度
-      ↓
-推荐相似物品
-```
-
-之后再根据实际数据规模决定是否使用：
-
-```text
-XGBoost
-```
-
-------
-
-# 二十六、NLP / Embedding 阶段
-
-后续对物品描述进行文本处理。
-
-例如用户发布：
-
-```text
-九成新苹果无线耳机，想换一个机械键盘
-```
-
-可以逐步提取：
-
-```text
-物品：
-无线耳机
-
-品牌：
-苹果
-
-成色：
-九成新
-
-类别：
-数码
-
-交换意向：
-机械键盘
-```
-
-进一步：
-
-```text
-文本
- ↓
-Embedding
- ↓
-向量
- ↓
-相似度计算
- ↓
-寻找语义相似的物品
-```
-
-最终实现更智能的交换匹配。
-
-------
-
-# 二十七、LangChain / LangGraph 阶段
-
-后续将项目接入：
-
-```text
-LangChain
-LangGraph
-```
-
-计划实现：
-
-```text
-Tool
-Agent
-RAG
-Memory
-Workflow
-```
-
-最终可以实现：
-
-```text
-智能交换助手
-```
-
-例如：
-
-```text
-用户：
-帮我找适合拿耳机交换的机械键盘
-
+Week 1
+后端核心业务
         ↓
+已基本完成
 
-AI 查询物品数据库
-
-        ↓
-
-分析用户物品
-
-        ↓
-
-Embedding / 相似度匹配
-
-        ↓
-
-推荐交换对象
-```
-
-------
-
-# 二十八、工程化阶段
-
-后续加入：
-
-```text
-Redis
-RabbitMQ
-Docker
-Linux
-Nginx
-```
-
-逐步学习：
-
-```text
-缓存
-消息队列
-异步任务
-容器化
-Linux 部署
-反向代理
-系统架构
-```
-
-最终目标类似：
-
-```text
-                Nginx
-                  ↓
-               FastAPI
-              ↙       ↘
-           Redis     MySQL
-              ↓
-          RabbitMQ
-              ↓
-        AI / ML 服务
-```
-
-具体架构等项目实际发展到该阶段后再决定。
-
-------
-
-# 二十九、最终项目路线
-
-整体路线：
-
-```text
-第一阶段
-FastAPI
-SQLAlchemy
-MySQL
-JWT
-bcrypt
-CRUD
-        ↓
-第二阶段
-用户
-物品
-交换
-权限控制
-业务状态
-        ↓
-第三阶段
-Pandas
-NumPy
-Matplotlib
-Seaborn
+Week 2
 数据分析
         ↓
-第四阶段
-scikit-learn
-KNN
+正在进行
+
+    ├── MySQL 数据读取       ✅
+    ├── Pandas DataFrame     ✅
+    ├── 基础统计              ✅
+    ├── 用户物品数量          ✅
+    ├── 用户交换次数          ✅
+    ├── 用户成功交换次数      ✅
+    ├── 用户交换成功率        ✅
+    ├── 用户行为表            ✅
+    ├── 交换类别关系          ✅
+    ├── 类别交换比例          ✅
+    ├── Matplotlib 基础       ✅
+    ├── 分组柱状图            🔄
+    └── 更进一步的业务分析    ⏳
+
+Week 3
 推荐系统
         ↓
-第五阶段
-NLP
-Embedding
-语义匹配
+scikit-learn
+KNN
+用户/物品特征
         ↓
-第六阶段
+
+后续
+Embedding
 LangChain
 LangGraph
 RAG
 Memory
 Agent
-        ↓
-第七阶段
-Redis
-RabbitMQ
-Docker
-Linux
-Nginx
-        ↓
-最终
-AI + 后端 + 数据分析 + 机器学习
-综合项目
 ```
 
 ------
 
-# 三十、后续开发原则
+# 25. 下一步
 
-继续开发时：
+当前不要直接跳到 KNN。
 
-1. **不重新设计已经完成的功能。**
-2. 每次只实现一个小功能。
-3. 修改前先说明为什么修改。
-4. 基于当前代码继续开发。
-5. 不一次性重写整个项目。
-6. 出现 Bug 时先解释原因，再修改。
-7. 每完成一个功能都进行测试。
-8. 功能稳定后再 Git commit。
-9. 暂时不进行不必要的架构重构。
-10. 后续学习的技术尽量与这个物换物项目结合。
-11. 不为了“堆技术”而加入 Redis、RabbitMQ、AI 等组件。
-12. 先理解基础原理，再把技术真正用到项目业务中。
+优先继续完成 Week 2：
+
+```text
+当前分组柱状图
+        ↓
+Top N 用户可视化
+        ↓
+交换类别可视化
+        ↓
+进一步用户行为分析
+        ↓
+整理推荐系统需要的特征
+        ↓
+再进入 KNN
+```
+
+下一步建议继续：
+
+> **把当前 `user_behavior` 做一个 Top N 用户分析/可视化。**
+
+之后再逐步把分析结果转成 KNN 推荐所需要的数据。
 
 ------
 
-# 三十一、当前结论
+# 26. 项目开发原则
 
-截至 **2026-09-04**：
+后续继续本项目时：
 
-```text
-第一阶段：完成 ✅
-```
-
-当前项目已经从单纯的：
-
-```text
-FastAPI CRUD
-```
-
-发展为：
-
-```text
-用户认证
-    ↓
-物品管理
-    ↓
-交换申请
-    ↓
-权限控制
-    ↓
-交换状态管理
-    ↓
-物品状态管理
-```
-
-核心交换流程已经闭环：
-
-```text
-pending
-   ↓
-accepted / rejected
-```
-
-其中接受交换后：
-
-```text
-双方物品
-   ↓
-unavailable
-```
-
-因此已经具备一个基本真实业务系统的雏形。
-
-------
-
-# 三十二、当前下一步
-
-**下一阶段从数据分析开始。**
-
-第一步计划：
-
-```text
-从 MySQL 读取当前物换物平台的数据
-        ↓
-使用 Pandas 转换成 DataFrame
-        ↓
-查看用户、物品、交换数据
-        ↓
-进行第一批基础统计
-```
-
-暂时不急着加入：
-
-```text
-Redis
-RabbitMQ
-LangChain
-LangGraph
-```
-
-先把：
-
-```text
-后端业务
-   ↓
-真实数据
-   ↓
-数据分析
-   ↓
-机器学习
-   ↓
-AI
-```
-
-这条路线真正跑通。
+1. 不重新设计已有项目。
+2. 不随意重构已有代码。
+3. 优先在现有代码基础上增加功能。
+4. 一次学习一个小步骤。
+5. 每写一段代码先运行确认。
+6. 用户问某个语法时，先解释当前语法，不要直接跳到后面的高级内容。
+7. 数据分析优先关注业务意义，不为了使用某个 Pandas 函数而强行分析。
+8. 推荐系统建立在前面的真实用户行为数据之上。
+9. 当前阶段重点是 Pandas + Matplotlib + 业务分析，不急着进入 LangChain/LangGraph。
+10. 每次继续项目时，以本文件和当前实际代码为准。
