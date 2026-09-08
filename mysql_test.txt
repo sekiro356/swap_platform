@@ -1,0 +1,413 @@
+```sql
+START TRANSACTION;
+
+-- ==========================================
+-- 1. 添加 20 个测试用户
+-- 密码统一：123456
+-- ==========================================
+
+INSERT INTO users (username, password) VALUES
+('张伟', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('李娜', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('王强', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('刘洋', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('陈晨', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('赵敏', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('孙磊', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('周杰', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('吴婷', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('郑凯', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('林浩', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('黄芳', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('何俊', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('徐静', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('郭超', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('马琳', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('唐杰', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('罗欣', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('彭宇', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC'),
+('谢雨', '$2b$04$js8PGM22sOHdg6ptJ6vfGurv9r.TxtvMK61.BU9o9hKwiERsrRpTC');
+
+
+-- ==========================================
+-- 2. 添加 50 个物品
+-- 前 40 个用于 accepted 交换，因此设为 unavailable
+-- 后 10 个保持 available
+-- ==========================================
+
+INSERT INTO items
+(name, description, category, price, user_id, status)
+VALUES
+
+('机械键盘','87键机械键盘，适合办公和游戏','数码',180,
+ (SELECT id FROM users WHERE username='张伟'),'unavailable'),
+
+('蓝牙耳机','降噪蓝牙耳机，续航约20小时','数码',220,
+ (SELECT id FROM users WHERE username='张伟'),'unavailable'),
+
+('Python编程入门','Python基础学习教材，适合初学者','书籍',45,
+ (SELECT id FROM users WHERE username='李娜'),'unavailable'),
+
+('三体','刘慈欣科幻小说三体第一部','书籍',35,
+ (SELECT id FROM users WHERE username='李娜'),'unavailable'),
+
+('篮球鞋','九成新篮球鞋，尺码42','服饰',260,
+ (SELECT id FROM users WHERE username='王强'),'unavailable'),
+
+('运动外套','黑色运动外套，尺码L','服饰',120,
+ (SELECT id FROM users WHERE username='王强'),'unavailable'),
+
+('Kindle阅读器','电子书阅读器，功能正常','数码',300,
+ (SELECT id FROM users WHERE username='刘洋'),'unavailable'),
+
+('高等数学教材','大学高等数学教材，少量笔记','书籍',30,
+ (SELECT id FROM users WHERE username='刘洋'),'unavailable'),
+
+('Switch游戏卡','热门Switch游戏卡带','游戏',180,
+ (SELECT id FROM users WHERE username='陈晨'),'unavailable'),
+
+('游戏手柄','无线游戏手柄，支持PC','游戏',150,
+ (SELECT id FROM users WHERE username='陈晨'),'unavailable'),
+
+('小米台灯','护眼台灯，亮度可调','生活用品',80,
+ (SELECT id FROM users WHERE username='赵敏'),'unavailable'),
+
+('保温杯','500ml不锈钢保温杯','生活用品',50,
+ (SELECT id FROM users WHERE username='赵敏'),'unavailable'),
+
+('无线鼠标','静音无线鼠标，办公使用','数码',70,
+ (SELECT id FROM users WHERE username='孙磊'),'unavailable'),
+
+('数据结构教材','数据结构与算法基础教材','书籍',55,
+ (SELECT id FROM users WHERE username='孙磊'),'unavailable'),
+
+('羽绒服','冬季羽绒服，尺码M','服饰',280,
+ (SELECT id FROM users WHERE username='周杰'),'unavailable'),
+
+('牛仔裤','经典蓝色牛仔裤，尺码32','服饰',100,
+ (SELECT id FROM users WHERE username='周杰'),'unavailable'),
+
+('PS5游戏光盘','动作冒险类PS5游戏光盘','游戏',260,
+ (SELECT id FROM users WHERE username='吴婷'),'unavailable'),
+
+('桌游卡牌','多人聚会桌游卡牌套装','游戏',90,
+ (SELECT id FROM users WHERE username='吴婷'),'unavailable'),
+
+('充电宝','10000mAh移动电源','数码',65,
+ (SELECT id FROM users WHERE username='郑凯'),'unavailable'),
+
+('手机支架','桌面折叠手机支架','生活用品',35,
+ (SELECT id FROM users WHERE username='郑凯'),'unavailable'),
+
+('Java核心技术','Java基础与进阶教材','书籍',70,
+ (SELECT id FROM users WHERE username='林浩'),'unavailable'),
+
+('英语词典','大学英语学习词典','书籍',40,
+ (SELECT id FROM users WHERE username='林浩'),'unavailable'),
+
+('运动背包','20L轻便运动背包','生活用品',90,
+ (SELECT id FROM users WHERE username='黄芳'),'unavailable'),
+
+('跑步手表','基础运动手表，支持计步','数码',160,
+ (SELECT id FROM users WHERE username='黄芳'),'unavailable'),
+
+('连帽卫衣','灰色连帽卫衣，尺码L','服饰',100,
+ (SELECT id FROM users WHERE username='何俊'),'unavailable'),
+
+('休闲鞋','白色休闲鞋，尺码41','服饰',150,
+ (SELECT id FROM users WHERE username='何俊'),'unavailable'),
+
+('Xbox游戏手柄','无线Xbox兼容手柄','游戏',180,
+ (SELECT id FROM users WHERE username='徐静'),'unavailable'),
+
+('Steam游戏兑换码','热门独立游戏兑换码','游戏',80,
+ (SELECT id FROM users WHERE username='徐静'),'unavailable'),
+
+('显示器支架','桌面显示器机械臂','数码',130,
+ (SELECT id FROM users WHERE username='郭超'),'unavailable'),
+
+('USB集线器','四口USB 3.0集线器','数码',60,
+ (SELECT id FROM users WHERE username='郭超'),'unavailable'),
+
+('摄影入门书','摄影构图与用光入门','书籍',50,
+ (SELECT id FROM users WHERE username='马琳'),'unavailable'),
+
+('漫画合集','经典漫画合集，保存良好','书籍',85,
+ (SELECT id FROM users WHERE username='马琳'),'unavailable'),
+
+('瑜伽垫','加厚防滑瑜伽垫','生活用品',70,
+ (SELECT id FROM users WHERE username='唐杰'),'unavailable'),
+
+('桌面收纳盒','多格桌面收纳用品','生活用品',40,
+ (SELECT id FROM users WHERE username='唐杰'),'unavailable'),
+
+('棒球帽','黑色休闲棒球帽','服饰',45,
+ (SELECT id FROM users WHERE username='罗欣'),'unavailable'),
+
+('双肩电脑包','15.6寸电脑双肩包','生活用品',110,
+ (SELECT id FROM users WHERE username='罗欣'),'unavailable'),
+
+('Kindle保护套','电子书阅读器保护套','数码',45,
+ (SELECT id FROM users WHERE username='彭宇'),'unavailable'),
+
+('数据线套装','Type-C多规格数据线','数码',35,
+ (SELECT id FROM users WHERE username='彭宇'),'unavailable'),
+
+('历史书籍','中国近现代史学习资料','书籍',45,
+ (SELECT id FROM users WHERE username='谢雨'),'unavailable'),
+
+('小说合集','经典文学小说合集','书籍',75,
+ (SELECT id FROM users WHERE username='谢雨'),'unavailable'),
+
+('机械键盘键帽','PBT键帽套装，适配常见键盘','数码',90,
+ (SELECT id FROM users WHERE username='张伟'),'available'),
+
+('手机壳','透明防摔手机壳','数码',25,
+ (SELECT id FROM users WHERE username='李娜'),'available'),
+
+('篮球','标准7号篮球','生活用品',100,
+ (SELECT id FROM users WHERE username='王强'),'available'),
+
+('计算器','科学计算器，适合大学课程','生活用品',35,
+ (SELECT id FROM users WHERE username='刘洋'),'available'),
+
+('PS5手柄','原装无线游戏手柄','游戏',320,
+ (SELECT id FROM users WHERE username='陈晨'),'available'),
+
+('护腕','运动护腕一对','服饰',30,
+ (SELECT id FROM users WHERE username='赵敏'),'available'),
+
+('编程习题册','Python算法与习题练习册','书籍',50,
+ (SELECT id FROM users WHERE username='孙磊'),'available'),
+
+('羽毛球拍','碳素羽毛球拍，轻量款','生活用品',140,
+ (SELECT id FROM users WHERE username='周杰'),'available'),
+
+('游戏鼠标','有线电竞鼠标','数码',120,
+ (SELECT id FROM users WHERE username='吴婷'),'available'),
+
+('桌面音箱','小型USB桌面音箱','数码',85,
+ (SELECT id FROM users WHERE username='郑凯'),'available');
+
+
+-- ==========================================
+-- 3. 添加 50 条交换记录
+-- ==========================================
+
+INSERT INTO swaps
+(requester_id, target_item_id, offered_item_id, status)
+VALUES
+
+-- ---------- accepted 20 条 ----------
+
+((SELECT id FROM users WHERE username='张伟'),
+ (SELECT id FROM items WHERE name='Java核心技术'),
+ (SELECT id FROM items WHERE name='机械键盘'),'accepted'),
+
+((SELECT id FROM users WHERE username='张伟'),
+ (SELECT id FROM items WHERE name='英语词典'),
+ (SELECT id FROM items WHERE name='蓝牙耳机'),'accepted'),
+
+((SELECT id FROM users WHERE username='李娜'),
+ (SELECT id FROM items WHERE name='运动背包'),
+ (SELECT id FROM items WHERE name='Python编程入门'),'accepted'),
+
+((SELECT id FROM users WHERE username='李娜'),
+ (SELECT id FROM items WHERE name='跑步手表'),
+ (SELECT id FROM items WHERE name='三体'),'accepted'),
+
+((SELECT id FROM users WHERE username='王强'),
+ (SELECT id FROM items WHERE name='连帽卫衣'),
+ (SELECT id FROM items WHERE name='篮球鞋'),'accepted'),
+
+((SELECT id FROM users WHERE username='王强'),
+ (SELECT id FROM items WHERE name='休闲鞋'),
+ (SELECT id FROM items WHERE name='运动外套'),'accepted'),
+
+((SELECT id FROM users WHERE username='刘洋'),
+ (SELECT id FROM items WHERE name='Xbox游戏手柄'),
+ (SELECT id FROM items WHERE name='Kindle阅读器'),'accepted'),
+
+((SELECT id FROM users WHERE username='刘洋'),
+ (SELECT id FROM items WHERE name='Steam游戏兑换码'),
+ (SELECT id FROM items WHERE name='高等数学教材'),'accepted'),
+
+((SELECT id FROM users WHERE username='陈晨'),
+ (SELECT id FROM items WHERE name='显示器支架'),
+ (SELECT id FROM items WHERE name='Switch游戏卡'),'accepted'),
+
+((SELECT id FROM users WHERE username='陈晨'),
+ (SELECT id FROM items WHERE name='USB集线器'),
+ (SELECT id FROM items WHERE name='游戏手柄'),'accepted'),
+
+((SELECT id FROM users WHERE username='赵敏'),
+ (SELECT id FROM items WHERE name='摄影入门书'),
+ (SELECT id FROM items WHERE name='小米台灯'),'accepted'),
+
+((SELECT id FROM users WHERE username='赵敏'),
+ (SELECT id FROM items WHERE name='漫画合集'),
+ (SELECT id FROM items WHERE name='保温杯'),'accepted'),
+
+((SELECT id FROM users WHERE username='孙磊'),
+ (SELECT id FROM items WHERE name='瑜伽垫'),
+ (SELECT id FROM items WHERE name='无线鼠标'),'accepted'),
+
+((SELECT id FROM users WHERE username='孙磊'),
+ (SELECT id FROM items WHERE name='桌面收纳盒'),
+ (SELECT id FROM items WHERE name='数据结构教材'),'accepted'),
+
+((SELECT id FROM users WHERE username='周杰'),
+ (SELECT id FROM items WHERE name='棒球帽'),
+ (SELECT id FROM items WHERE name='羽绒服'),'accepted'),
+
+((SELECT id FROM users WHERE username='周杰'),
+ (SELECT id FROM items WHERE name='双肩电脑包'),
+ (SELECT id FROM items WHERE name='牛仔裤'),'accepted'),
+
+((SELECT id FROM users WHERE username='吴婷'),
+ (SELECT id FROM items WHERE name='Kindle保护套'),
+ (SELECT id FROM items WHERE name='PS5游戏光盘'),'accepted'),
+
+((SELECT id FROM users WHERE username='吴婷'),
+ (SELECT id FROM items WHERE name='数据线套装'),
+ (SELECT id FROM items WHERE name='桌游卡牌'),'accepted'),
+
+((SELECT id FROM users WHERE username='郑凯'),
+ (SELECT id FROM items WHERE name='历史书籍'),
+ (SELECT id FROM items WHERE name='充电宝'),'accepted'),
+
+((SELECT id FROM users WHERE username='郑凯'),
+ (SELECT id FROM items WHERE name='小说合集'),
+ (SELECT id FROM items WHERE name='手机支架'),'accepted'),
+
+
+-- ---------- pending 15 条 ----------
+
+((SELECT id FROM users WHERE username='张伟'),
+ (SELECT id FROM items WHERE name='篮球鞋'),
+ (SELECT id FROM items WHERE name='机械键盘键帽'),'pending'),
+
+((SELECT id FROM users WHERE username='李娜'),
+ (SELECT id FROM items WHERE name='Kindle阅读器'),
+ (SELECT id FROM items WHERE name='手机壳'),'pending'),
+
+((SELECT id FROM users WHERE username='王强'),
+ (SELECT id FROM items WHERE name='Python编程入门'),
+ (SELECT id FROM items WHERE name='篮球'),'pending'),
+
+((SELECT id FROM users WHERE username='刘洋'),
+ (SELECT id FROM items WHERE name='PS5游戏光盘'),
+ (SELECT id FROM items WHERE name='计算器'),'pending'),
+
+((SELECT id FROM users WHERE username='陈晨'),
+ (SELECT id FROM items WHERE name='无线鼠标'),
+ (SELECT id FROM items WHERE name='PS5手柄'),'pending'),
+
+((SELECT id FROM users WHERE username='赵敏'),
+ (SELECT id FROM items WHERE name='羽绒服'),
+ (SELECT id FROM items WHERE name='护腕'),'pending'),
+
+((SELECT id FROM users WHERE username='孙磊'),
+ (SELECT id FROM items WHERE name='三体'),
+ (SELECT id FROM items WHERE name='编程习题册'),'pending'),
+
+((SELECT id FROM users WHERE username='周杰'),
+ (SELECT id FROM items WHERE name='Kindle阅读器'),
+ (SELECT id FROM items WHERE name='羽毛球拍'),'pending'),
+
+((SELECT id FROM users WHERE username='吴婷'),
+ (SELECT id FROM items WHERE name='运动背包'),
+ (SELECT id FROM items WHERE name='游戏鼠标'),'pending'),
+
+((SELECT id FROM users WHERE username='郑凯'),
+ (SELECT id FROM items WHERE name='Java核心技术'),
+ (SELECT id FROM items WHERE name='桌面音箱'),'pending'),
+
+((SELECT id FROM users WHERE username='张伟'),
+ (SELECT id FROM items WHERE name='运动外套'),
+ (SELECT id FROM items WHERE name='机械键盘键帽'),'pending'),
+
+((SELECT id FROM users WHERE username='李娜'),
+ (SELECT id FROM items WHERE name='篮球鞋'),
+ (SELECT id FROM items WHERE name='手机壳'),'pending'),
+
+((SELECT id FROM users WHERE username='王强'),
+ (SELECT id FROM items WHERE name='数据结构教材'),
+ (SELECT id FROM items WHERE name='篮球'),'pending'),
+
+((SELECT id FROM users WHERE username='刘洋'),
+ (SELECT id FROM items WHERE name='羽绒服'),
+ (SELECT id FROM items WHERE name='计算器'),'pending'),
+
+((SELECT id FROM users WHERE username='陈晨'),
+ (SELECT id FROM items WHERE name='Kindle保护套'),
+ (SELECT id FROM items WHERE name='PS5手柄'),'pending'),
+
+
+-- ---------- rejected 15 条 ----------
+
+((SELECT id FROM users WHERE username='赵敏'),
+ (SELECT id FROM items WHERE name='Java核心技术'),
+ (SELECT id FROM items WHERE name='护腕'),'rejected'),
+
+((SELECT id FROM users WHERE username='孙磊'),
+ (SELECT id FROM items WHERE name='运动背包'),
+ (SELECT id FROM items WHERE name='编程习题册'),'rejected'),
+
+((SELECT id FROM users WHERE username='周杰'),
+ (SELECT id FROM items WHERE name='三体'),
+ (SELECT id FROM items WHERE name='羽毛球拍'),'rejected'),
+
+((SELECT id FROM users WHERE username='吴婷'),
+ (SELECT id FROM items WHERE name='高等数学教材'),
+ (SELECT id FROM items WHERE name='游戏鼠标'),'rejected'),
+
+((SELECT id FROM users WHERE username='郑凯'),
+ (SELECT id FROM items WHERE name='篮球鞋'),
+ (SELECT id FROM items WHERE name='桌面音箱'),'rejected'),
+
+((SELECT id FROM users WHERE username='张伟'),
+ (SELECT id FROM items WHERE name='PS5游戏光盘'),
+ (SELECT id FROM items WHERE name='机械键盘键帽'),'rejected'),
+
+((SELECT id FROM users WHERE username='李娜'),
+ (SELECT id FROM items WHERE name='无线鼠标'),
+ (SELECT id FROM items WHERE name='手机壳'),'rejected'),
+
+((SELECT id FROM users WHERE username='王强'),
+ (SELECT id FROM items WHERE name='Kindle阅读器'),
+ (SELECT id FROM items WHERE name='篮球'),'rejected'),
+
+((SELECT id FROM users WHERE username='刘洋'),
+ (SELECT id FROM items WHERE name='桌游卡牌'),
+ (SELECT id FROM items WHERE name='计算器'),'rejected'),
+
+((SELECT id FROM users WHERE username='陈晨'),
+ (SELECT id FROM items WHERE name='羽绒服'),
+ (SELECT id FROM items WHERE name='PS5手柄'),'rejected'),
+
+((SELECT id FROM users WHERE username='赵敏'),
+ (SELECT id FROM items WHERE name='数据结构教材'),
+ (SELECT id FROM items WHERE name='护腕'),'rejected'),
+
+((SELECT id FROM users WHERE username='孙磊'),
+ (SELECT id FROM items WHERE name='运动外套'),
+ (SELECT id FROM items WHERE name='编程习题册'),'rejected'),
+
+((SELECT id FROM users WHERE username='周杰'),
+ (SELECT id FROM items WHERE name='Python编程入门'),
+ (SELECT id FROM items WHERE name='羽毛球拍'),'rejected'),
+
+((SELECT id FROM users WHERE username='吴婷'),
+ (SELECT id FROM items WHERE name='英语词典'),
+ (SELECT id FROM items WHERE name='游戏鼠标'),'rejected'),
+
+((SELECT id FROM users WHERE username='郑凯'),
+ (SELECT id FROM items WHERE name='篮球'),
+ (SELECT id FROM items WHERE name='桌面音箱'),'rejected');
+
+
+COMMIT;
+```
+
+

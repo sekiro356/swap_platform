@@ -1,5 +1,5 @@
 # 注册接口
-
+from typing import Literal
 from pydantic import BaseModel
 
 # 规定注册接口要求用户传递什么数据(规定前端传什么)
@@ -17,7 +17,7 @@ class UserLogin(BaseModel):
 class ItemCreate(BaseModel):
     name : str
     description : str
-    category : str
+    category : Literal['数码','书籍','服饰','鞋靴','家电','家居生活','美妆个护','运动户外','玩具','乐器','办公用品','其他']
     price : int
 
 

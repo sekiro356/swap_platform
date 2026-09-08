@@ -18,7 +18,7 @@ def create_access_token(user_id:int):
     # Token 中保存数据
     payload = {
         'user_id':user_id,
-        'exp':datetime.utcnow() + timedelta(hours=2) # 设置 token 的过期时间：2小时后
+        'exp':datetime.utcnow() + timedelta(hours=10) # 设置 token 的过期时间：2小时后
     }
 
     # 生成 JWT
