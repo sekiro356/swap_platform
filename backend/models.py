@@ -1,6 +1,7 @@
 # 定义数据库中的表长什么样
 
-from sqlalchemy import Column,Integer,String
+from datetime import datetime
+from sqlalchemy import Column,Integer,String,DateTime
 from database import Base
 
 # 直接在 python 让 sqlalchemy 帮忙直接生成 SQL 表，本质和直接在 mysql 中编写一样
@@ -47,6 +48,9 @@ class Swap(Base):
 
     # 交换状态
     status = Column(String(20),default='pending',nullable=False)
+
+    # 交换申请创建时间
+    created_at = Column(DateTime, default=datetime.now,nullable=False)
 
 
 

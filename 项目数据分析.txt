@@ -1,0 +1,379 @@
+## analisis 分析
+
+### step 1:
+
+Sqlalchemy -> MySQL -> data -> pandas -> Dataframe
+
+```py
+db = Session() # 连接数据库
+
+users = db.query(User).all()
+df_user = pd.Dateframe([
+    {
+        'id':user.id,
+        ...
+    }for user in users
+])
+...
+```
+
+**df_user** : id , username
+
+**df_items** : id , name , category , price , user_id , status
+
+**df_swaps** : id , requester_id , target_item_id , offered_item_id , status
+
+> [!NOTE]
+>
+> len()
+> ↓
+> 总共有多少行？
+>
+> 
+>
+> value_counts()
+> ↓
+> 每个值分别有多少个？
+>
+> 
+>
+> groupby().size()
+> ↓
+> 每个组分别有多少行？
+
+### step 2:
+
+ 获取每个用户发布了多少物品，然后与用户表关联得出**更详细的用户数据**
+
+```py
+item_count = df.items.groupby('user_id').size().reset_index(name = 'item_count')
+```
+
+item_count : user_id , item_count
+
+df_user : id , username
+
+通过 merge 关联得出 
+
+**df_user_analysis**: id , username ,user_id , item_count
+
+
+
+**交换成功率：**
+
+```py
+accept_count = (df_swaps['status'] == 'accepted').sum() # 获取成功总数
+total_count = len(df_swaps)
+success_rate = accept_count / total_count
+```
+
+
+
+**获取更详细的交换表**（给表加上类别）
+
+关联 `df_swaps` 和表 `df_items[['category','id']]` 得出 swap_analysis
+
+关联两次，分别让 target_item_id 与 id 关联 得出 target_item_id 对应的类别，第二次让关联后的表中的 offered_item_id 和 id 再次关联得出 target_item_id 和 offered_item_id 两个分别对应的类别
+
+swap_analysis : id_x , requester_id , target_item_id , offered_item_id , status , id_y , category 
+
+联合 category,id ,通过 suffixes=('_target','_offered') (suffixes只会在相同的列明后面加后缀)
+
+--->
+
+**swap_analysis** : id_x , requester_id , target_item_id , offered_item_id , status , id_y , category_target , id_z , category_offered
+
+
+
+**统计交换方向的数量：**
+
+```py
+swap_ration = (swap_analysis.groupby(['category_target','category_offered']).size().reset_index(name = 'swap_count'))
+```
+
+swap_ration : category_target , category_offered , swap_count
+
+百分比：
+
+```py
+swap_reaction['ratio'] = swap_reaction['swap_count'] / swap_reaction['swap_count'].sum() * 100
+```
+
+**统计每人发起的交换次数：**
+
+```py
+user_swap_count = (swap_analysis.groupby('requester_id').size().reset_index(name='swap_count'))
+```
+
+user_swap_count : requester_id , swap_count
+
+**统计每个人交换成功了多少次：**
+
+```py
+user_accept_count = (swap_analysis[swap_analysis['status'] == 'accepted']                     .groupby('requester_id').size().reset_index(name='accepted_count'))
+```
+
+user_accept_count : requester_id ,  accepted_count
+
+
+
+**获取用户交换分析：**
+
+将 user_swap_count 与 user_accept_count 进行关联得出 user_swap_analysis
+
+user_swap_analysis ：requester_id , swap_count , accepted_count
+
+添加交换成功率：
+
+```py
+user_swap_analysis['success_rate'] = user_swap_analysis['accepted_count'] / user_swap_analysis['swap_count']
+```
+
+user_swap_analysis ：requester_id , swap_count , accepted_count , success_rate
+
+合并 df_user[['id','username]]，并删除多余的 id 字段
+
+最终 :
+
+**user_swap_analysis** ：requester_id , swap_count , accepted_count , success_rate ,  username
+
+
+
+**用户行为表：**
+
+关联 df_user_analysis 和 user_swap_analysis[['requester_id','swap_count','accepted_count','success_rate']]
+
+得出 :
+
+user_behavior :  id , username ,user_id , item_count ,  requester_id , swap_count , accepted_count , success_rate
+
+
+
+### step 3:
+
+画图:
+
+每个用户交换物品数量图：
+
+```py
+plt.bar(user_behavior['username'],
+        user_behavior['item_count'])
+```
+
+每个用户交换次数
+
+```py
+plt.bar(user_behavior['username'],
+        user_behavior['swap_count'])
+```
+
+
+
+将两图进行融合：
+
+条件筛选，筛选出交换数量前10的
+
+```py
+sort_column = 'swap_count'
+top_n = 10 # 查看的数量
+
+top_users = user_behavior.sort_values(
+    sort_column, # 以什么进行排序
+    ascending=False  # 降序
+).head(top_n)
+```
+
+```py
+x = range(len(top_users['username'])) # 有多少用户就画几条树状图
+plt.bar(
+    [i - 0.2 for i in x], # 给每组图向左移动，差开交换次数
+    top_users['item_count'],
+    width=0.4,
+    label = '物品数量'
+)
+
+plt.bar(
+        [i+0.2 for i in x], # # 给每组图向右移动，差开物品数量
+        top_users['swap_count'],
+        width=0.4,
+        label = '交换次数'
+        )
+```
+
+
+
+**用户交换次数 + 用户交换成功率表：**
+
+```py
+# fig 为整张图，ax1为坐标轴
+fig,ax1 = plt.subplots(figsize = (8,5))
+
+ax1.bar(
+    user_behavior['username'],
+    user_behavior['swap_count'],
+    width = 0.5,
+    label = '交换次数'
+)
+
+ax2 = ax1.twinx() # 创建一个与 ax1 共用 X 轴、但拥有独立 Y 轴的 Axes，并把这个 Y 轴放到右边。
+ax2.plot(
+    user_behavior['username'],
+    user_behavior['success_rate'],
+    marker = 'o',
+    label = '成功率'
+)
+# 给每个点添加成功率
+for x,y in zip(user_behavior['username'],user_behavior['success_rate']):
+    ax2.text(
+        # username,success_rate(0.4),0.4 -> f'{y:.0%}' -> 40%   --> 将这个人的成功率0.4显示为40%
+        # ha：水平对齐（center:水平居中）
+        # va:垂直对齐
+        x,y,f'{y:.0%}',ha ='center',va = 'bottom',color = 'red'
+    )
+```
+
+```py
+# 合并两个坐标轴的图例
+# 获取图例图标 + 图例文字
+lines1,labels1 = ax1.get_legend_handles_labels()
+lines2,labels2 = ax2.get_legend_handles_labels()
+
+# 结合
+ax1.legend(
+    lines1 + lines2,
+    labels1 + labels2
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

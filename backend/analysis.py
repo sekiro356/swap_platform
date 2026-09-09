@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用黑体
 plt.rcParams['axes.unicode_minus'] = False    # 正常显示负号
 
+# 连接数据库
 db = SessionLocal()
 
 # 先将数据库中的表转化为 dataframe 形式，方便画图
@@ -24,6 +25,8 @@ df_user = pd.DataFrame([
     for user in users
 ])
 
+# df_user : id,username
+
 items = db.query(Items).all()
 df_items = pd.DataFrame([
     {
@@ -36,6 +39,7 @@ df_items = pd.DataFrame([
     }
     for item in items
 ])
+# df_items : id , name , category , price , user_id , status
 
 swaps = db.query(Swap).all()
 df_swaps = pd.DataFrame([
@@ -48,19 +52,23 @@ df_swaps = pd.DataFrame([
     }
     for swap in swaps
 ])
+# df_swaps : id , requester_id , target_item_id , offered_item_id , status
 
-print(df_user)
-print(df_items)
-print(df_swaps)
+
+print('\n用户表:\n',df_user)
+print('\n物品表:\n',df_items)
+print('\n交换申请表:\n',df_swaps)
 
 print('\n用户数量: ',len(df_user))
 print('\n物品数量: ',len(df_items))
 print('\n交换记录数量: ',len(df_swaps))
 
 # 查看每种物品的数量
+print('\n每种物品的数量:\n')
 print(df_items['category'].value_counts())
 
 # 查看交换物品状态数量
+print('\n交换物品状态数量:\n')
 print(df_swaps['status'].value_counts())
 
 # 看谁发布了多少件商品
@@ -69,6 +77,7 @@ print(df_items.groupby('user_id').size())
 
 # 给未命名的列重命名
 item_count = df_items.groupby('user_id').size().reset_index(name='item_count')
+print('\n每个用户发布的物品数量：\n')
 print(item_count)
 
 # 关联 物品表和用户表，显示出用户名
@@ -101,8 +110,8 @@ swap_analysis = df_swaps.merge(
     right_on='id',
     how = 'left'
 )
-print(swap_analysis)
-print(swap_analysis['category'].value_counts())
+print('\n得出targeted_id 的类别\n',swap_analysis)
+print('\n每种物品的数量\n',swap_analysis['category'].value_counts())
 
 # 不同种类交换
 swap_analysis = swap_analysis.merge(
@@ -110,10 +119,10 @@ swap_analysis = swap_analysis.merge(
     left_on='offered_item_id',
     right_on='id',
     how='left',
-    suffixes=('_target','_offered') # 两边都有 category
+    suffixes=('_target','_offered') # 两边都有 category，只会在联合名字相同的列后面加后缀
     # 合并会变成 category_x和 category_y 经过 suffixes 后变成 category_target 和category_offered
 )
-print(swap_analysis)
+print('\n得出offered_id 的类别\n',swap_analysis)
 print(
     swap_analysis[
         ['target_item_id', 'offered_item_id',
@@ -125,21 +134,21 @@ print(
 swap_reaction = (
     swap_analysis.groupby(['category_target','category_offered']).size().reset_index(name='swap_count')
 )
-print(swap_reaction)
+print('\n物品交换方向的数量\n',swap_reaction)
 
 # 计算每种交换类别占总交换类别的比例(百分比)
 swap_reaction['ratio'] = swap_reaction['swap_count'] / swap_reaction['swap_count'].sum() * 100
-print(swap_reaction)
+print('\n物品交换方向所占的百分比\n',swap_reaction)
 
 
 # 统计每个人发起交换发起了多少次
-user_swap_count = (df_swaps.groupby('requester_id').size().reset_index(name='swap_count'))
-print(user_swap_count)
+user_swap_count = (swap_analysis.groupby('requester_id').size().reset_index(name='swap_count'))
+print('\n每个人发起了多少次交换\n',user_swap_count)
 
 # 统计每个用户交换成功了多少次
-user_accept_count = (df_swaps[df_swaps['status'] == 'accepted']
+user_accept_count = (swap_analysis[swap_analysis['status'] == 'accepted']
                      .groupby('requester_id').size().reset_index(name='accepted_count'))
-print(user_accept_count)
+print('\n每人成功交换次数\n',user_accept_count)
 
 # 将每个人发起的交换次数与交换成功的表进行融合
 user_swap_analysis = user_swap_count.merge(
@@ -153,7 +162,7 @@ print(user_swap_analysis)
 
 # 后面添加交换成功率
 user_swap_analysis['success_rate'] = user_swap_analysis['accepted_count'] / user_swap_analysis['swap_count']
-print(user_swap_analysis)
+print('\n用户交换分析\n',user_swap_analysis)
 
 # 添加 id 和 用户名，使结果更加直观
 user_swap_analysis = user_swap_analysis.merge(
@@ -180,7 +189,7 @@ user_behavior['swap_count'] = (user_behavior['swap_count'].fillna(0).astype(int)
 user_behavior['accepted_count'] = (user_behavior['accepted_count'].fillna(0).astype(int))
 user_behavior['success_rate'] = (user_behavior['success_rate'].fillna(0))
 
-print(user_behavior)
+print('\n用户行为表\n',user_behavior)
 
 # 画图
 # 用户拥有物品数量图
@@ -226,7 +235,7 @@ plt.bar(
         label = '交换次数'
         )
 
-plt.xticks(x,top_users['username'])
+plt.xticks(x,top_users['username']) # 第一个 x 表示刻度放在哪里 ，因为原图已经偏移了,top_users['username']表示每个刻度的名
 
 plt.xlabel('用户')
 plt.ylabel('数量')
@@ -392,6 +401,210 @@ print(
     f'{category_success_rate.idxmin()}，'
     # min() : 获取最小值
     f'成功率为 {category_success_rate.min():.2%}'
+)
+
+
+# 准备机器学习数据
+
+# 预测用户交换物品成功率
+
+# 将目标物品信息加入交换记录
+ml_data = df_swaps.merge(
+    df_items[['id','category','price']],
+    left_on='target_item_id',
+    right_on='id',
+    how='left'
+)
+
+# 重命名目标物品信息
+ml_data = ml_data.rename(
+    columns={
+        'category':'target_category',
+        'price':'target_price'
+    }
+)
+
+# 删除多余的 id
+ml_data = ml_data.drop(columns='id_y')
+print('\n目标物品关联后的机器学习数据：\n')
+print(ml_data.head(10))
+
+# 将提供物品信息加入交换记录
+ml_data = ml_data.merge(
+    df_items[['id','price','category']],
+    left_on='offered_item_id',
+    right_on='id',
+    how='left'
+)
+
+ml_data = ml_data.rename(
+    columns={
+        'category':'offered_category',
+        'price':'offered_price'
+    }
+)
+
+# 删除多余 id
+ml_data = ml_data.drop(columns='id')
+ml_data = ml_data.rename(columns={'id_x':'id'})
+print('\n目标物品 + 提供物品信息：')
+print(ml_data)
+
+# ml_data: id | requester_id | target_item_id | offered_item_id | target_price |target_category | offered_price | offered_category
+
+# 计算价格关系特征
+# 有方向
+ml_data['price_diff'] = (ml_data['offered_price'] - ml_data['target_price'])
+
+ml_data['price_diff_abs'] = ml_data['price_diff'].abs()
+
+# 价格比例
+ml_data['price_ratio'] = ml_data['offered_price'] / ml_data['target_price']
+print('\n加入价格关系特征后：')
+print(
+    ml_data[
+        [
+            'target_price',
+            'offered_price',
+            'price_diff',
+            'price_diff_abs',
+            'price_ratio'
+        ]
+    ]
+)
+
+# 计算用户历史行为特征
+# 只能使用当前之前交换的数据
+
+# 按交换 id 排序，模拟交换发生的先后顺序
+# drop=True：不要把旧的行号保留下来作为新的一列。
+ml_data = ml_data.sort_values('id').reset_index(drop=True) # reset_index(drop=True)：使重新排列后行号不会变还是从0开始
+
+# 当前交换之前，该用户已经发生了多少次交换
+ml_data['user_swap_count'] = ml_data.groupby('requester_id').cumcount()
+print('\n加入用户历史交换次数：')
+print(
+    ml_data[
+        [
+            'id',
+            'requester_id',
+            'status',
+            'user_swap_count'
+        ]
+    ]
+)
+
+# 当前交换之前，已经成功进行了多少次交换：
+# 按用户分组，然后取每个用户的 status 经过 x:(x.eq('accepted')) 会变成 True/False
+# 再.cumsum()会累次成功次数
+# .shift(fill_value = 0) ： 将 x 的计算结果向下移动
+"""
+1     rejected    0
+2     accepted    1
+3     accepted    2
+4     rejected    2
+预测 id = 2 时 成功次数应该为 0 不应该用这次的1，让上面补0，然后下移，就不会让函数提前知道这次会成功，从而进行预测
+id    shift后
+1     0
+2     0
+3     1
+4     2
+"""
+
+# .transform ：将用户分为一组一组的
+# lambda x: x + 10 等价于 def func(x):
+#                           return x + 10
+ml_data['user_accepted_count'] = (ml_data.groupby('requester_id')['status']
+                                  .transform(lambda x:(x.eq('accepted')).cumsum().shift(fill_value = 0)))
+
+print('\n加入用户历史成功次数：')
+print(
+    ml_data[
+        [
+            'id',
+            'requester_id',
+            'status',
+            'user_swap_count',
+            'user_accepted_count'
+        ]
+    ]
+)
+
+# 计算用户交换成功率
+# 当前交换之前，用户历史成功率
+ml_data['user_success_rate'] = ml_data['user_accepted_count'] / ml_data['user_swap_count']
+
+# 第一次交换没有历史数据，成功概率为0
+ml_data['user_success_rate'] = ml_data['user_success_rate'].fillna(0)
+print('\n用户历史行为特征：')
+print(
+    ml_data[
+        [
+            'id',
+            'requester_id',
+            'status',
+            'user_swap_count',
+            'user_accepted_count',
+            'user_success_rate'
+        ]
+    ]
+)
+
+# 计算类别交换方向的历史次数
+ml_data['category_swap_count'] = ml_data.groupby(['target_category','offered_category']).cumcount()
+print('\n加入类别方向历史交换次数：')
+print(
+    ml_data[
+        [
+            'id',
+            'target_category',
+            'offered_category',
+            'status',
+            'category_swap_count'
+        ]
+    ]
+)
+
+# 计算类别交换方向的历史成功次数
+ml_data['category_accepted_count'] = ml_data.groupby(['target_category','offered_category'])['status'].transform(
+    lambda x:x.eq('accepted').cumsum().shift(fill_value = 0)
+)
+
+# 计算交换成功率
+ml_data['category_success_rate'] = ml_data['category_accepted_count'] / ml_data['category_swap_count']
+
+# 第一次出现交换方向时没有历史数据
+ml_data['category_success_rate'] = ml_data['category_success_rate'].fillna(0)
+print('\n类别方向历史特征：')
+print(
+    ml_data[
+        [
+            'id',
+            'target_category',
+            'offered_category',
+            'status',
+            'category_swap_count',
+            'category_accepted_count',
+            'category_success_rate'
+        ]
+    ]
+)
+
+# 将交换结果转换为机器学习标签(目标)
+# accepted = 1，表示交换成功
+# 其他状态 = 0，表示交换失败
+
+# astype(int): 会将 bool 值转化为 0/1
+ml_data['label'] = (ml_data['status'] == 'accepted').astype(int)
+print('\n加入机器学习标签后：')
+print(
+    ml_data[
+        [
+            'id',
+            'status',
+            'label'
+        ]
+    ]
 )
 
 db.close()
