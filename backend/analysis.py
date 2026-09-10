@@ -641,6 +641,37 @@ print(X.info())
 print('\n目标 y：')
 print(y)
 
+# one-hot 处理
+X = pd.get_dummies(X,columns=['target_category','offered_category'])
+print(X.info())
+
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split,GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+x_train,x_test,y_train,y_test = train_test_split(X,y,random_state=22,test_size=0.2)
+
+# 标准化
+transformer = StandardScaler()
+x_train = transformer.fit_transform(x_train)
+x_test = transformer.transform(x_test)
+
+model = KNeighborsClassifier(n_neighbors=10)
+
+
+# 交叉验证
+# param_grid = {'n_neighbors':range(1,15)}
+# estimator = GridSearchCV(estimator=model,param_grid=param_grid,cv=4)
+# estimator.fit(x_train,y_train)
+# print(estimator.best_estimator_)
+
+model.fit(x_train,y_train)
+y_pred = model.predict(x_test)
+print(accuracy_score(y_test,y_pred))
+
+
 db.close()
 
 
