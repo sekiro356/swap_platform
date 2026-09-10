@@ -404,10 +404,13 @@ print(
 )
 
 
-# 准备机器学习数据
+# =========================================准备机器学习数据===============================================================
+# 准备模型预测要使用的数据
+# 主要使用的有：用户历史行为（用户过去交换多少次、交换次数、成功率）、价格关系特征（差价、价格比例（判断谁是高价方））、
+#             类别关系特征（类别交换次数、类别组合交换成功率）主要从三方面的数据进行训练模型进行预测
+
 
 # 预测用户交换物品成功率
-
 # 将目标物品信息加入交换记录
 ml_data = df_swaps.merge(
     df_items[['id','category','price']],
@@ -606,6 +609,37 @@ print(
         ]
     ]
 )
+
+# 划分特质 X 和 目标 y
+
+X = ml_data[
+    [
+        'user_swap_count',
+        'user_accepted_count',
+        'user_success_rate',
+
+        'target_price',
+        'offered_price',
+        'price_diff',
+        'price_diff_abs',
+        'price_ratio',
+
+        'target_category',
+        'offered_category',
+
+        'category_swap_count',
+        'category_success_rate',
+    ]
+]
+
+# y : 模型预测的目标值
+y = ml_data['label']
+
+print('\n机器学习特征 X：')
+print(X.info())
+
+print('\n目标 y：')
+print(y)
 
 db.close()
 
