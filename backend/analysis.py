@@ -649,27 +649,176 @@ print(X.info())
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split,GridSearchCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score,classification_report,confusion_matrix,roc_auc_score,average_precision_score
+from sklearn.linear_model import LogisticRegression
 
-x_train,x_test,y_train,y_test = train_test_split(X,y,random_state=22,test_size=0.2)
+x_train,x_test,y_train,y_test = train_test_split(X,y,random_state=22,test_size=0.2,stratify=y)
 
 # 标准化
 transformer = StandardScaler()
 x_train = transformer.fit_transform(x_train)
 x_test = transformer.transform(x_test)
 
-model = KNeighborsClassifier(n_neighbors=10)
+# KNN模型
+# 为啥不用KNN：数据存在明显的不平衡，逻辑回归可以提高少数样本的权重
+# （刚开始确实用 KNN ，并通过交叉验证得到最佳 K 值为 16 ， 但是正类的召回率只有 0.03，模型几乎吧所有样本都预测成了负类。
+#   进一步分析发现数据极度不平衡,用逻辑回归可以提高少数样本的权重，可以改善模型对成功交换样本的识别能力）
+# model = KNeighborsClassifier(n_neighbors=16)
+
+# 逻辑回归
+# class_weight='balanced':让模型自动给样本少的更高的权重
+lr_model = LogisticRegression(class_weight='balanced',random_state=22)
+
+lr_model.fit(x_train,y_train)
+# lr_pred = lr_model.predict(x_test)
+
+# 获取预测为 1 的概率
+# 问模型对于测试集中的每一条交换，成功率是多少
+y_prob = lr_model.predict_proba(x_test)[:,1]
+
+# 设置分类阈值
+# 成功率大于阈值的预测为1，小于阈值的预测为0
+threshold = 0.6
+
+# 根据阈值判断最终类别
+lr_pred = (y_prob >= threshold).astype(int)
 
 
-# 交叉验证
-# param_grid = {'n_neighbors':range(1,15)}
+# # 交叉验证
+# param_grid = {'n_neighbors':range(1,200)}
 # estimator = GridSearchCV(estimator=model,param_grid=param_grid,cv=4)
 # estimator.fit(x_train,y_train)
 # print(estimator.best_estimator_)
 
-model.fit(x_train,y_train)
-y_pred = model.predict(x_test)
-print(accuracy_score(y_test,y_pred))
+# model.fit(x_train,y_train)
+# y_pred = model.predict(x_test)
+
+print('\n阈值:\n',threshold)
+
+print('\n准确率:\n',accuracy_score(y_test,lr_pred))
+
+print('\n混淆矩阵:\n',confusion_matrix(y_test,lr_pred))
+
+print('\n分类报告：\n',classification_report(y_test,lr_pred))
+
+
+# 获取测试集对应的原始数据索引
+test_index = y_test.index  # 找出这些测试数据原本在 ml_data 中对应的行
+
+# 将预测概率保存到测试集数据中
+ml_data.loc[test_index,'success_probability'] = y_prob
+
+# 保存最终预测结果
+ml_data.loc[test_index,'predicted_label'] = lr_pred
+
+print(ml_data.loc[
+    test_index,
+    [
+        'id','target_category','offered_category',
+        'label','success_probability','predicted_label'
+    ]
+      ].head(10))
+
+
+# 查看逻辑回归模型的特征权重（查看哪个特征对样本预测成功率影响最大）
+feature_names = X.columns
+
+coef_df = pd.DataFrame({
+    'feature':feature_names,
+    'coefficient':lr_model.coef_[0]
+})
+
+# 按权重绝对值从大到小排序
+coef_df['acs_coefficient'] = coef_df['coefficient'].abs()
+
+coef_df = coef_df.sort_values(
+    'acs_coefficient',
+    ascending=False
+)
+
+print('\n影响最大的特征：\n')
+print(coef_df.head(10))
+
+"""
+                  feature  coefficient  acs_coefficient
+8     category_swap_count    -1.834602         1.834602
+6          price_diff_abs    -1.310446         1.310446
+0         user_swap_count    -0.785082         0.785082
+4           offered_price     0.743469         0.743469
+
+ coefficient 为负，acs_coefficient越大，则模型认为交换越不会成功
+"""
+
+# ROC-AUC
+roc_auc = roc_auc_score(y_test,y_prob) # 判断模型的可靠性，auc值越大，模型可靠性越高
+
+# PR-AUC
+pr_auc = average_precision_score(y_test,y_prob)
+print('\nROC-AUC：', roc_auc) # auc 面积越大，模型性能越好
+# 看模型预测出的正类准不准确
+print('PR-AUC：', pr_auc) # 主要看模型找出来的"成功交换"到底好不好
+
+import matplotlib.pyplot as plt
+
+# 直方图
+plt.hist(
+    y_prob[y_test == 0], # 预测概率中，实际是 0（失败），返回 bool
+    bins=20, # 把 0-1 分成 20 个区间
+    alpha=0.6, # 透明度
+    label='实际失败'
+)
+
+plt.hist(
+    y_prob[y_test == 1],
+    bins=20,
+    alpha=0.6,
+    label='实际成功'
+)
+
+plt.xlabel('预测成功概率')
+plt.ylabel('数量')
+plt.title('预测成功概率分布')
+plt.legend()
+plt.show()
+
+category_stats = ml_data.groupby(
+    ['target_category', 'offered_category']
+)['label'].agg(
+    ['count', 'sum', 'mean']
+)
+
+category_stats = category_stats.sort_values(
+    'count',
+    ascending=False
+)
+
+print(category_stats)
+
+
+# 查看一笔交易的预测结果
+sample_index = test_index[0]
+print('\n这笔交换的信息：')
+
+print(
+    ml_data.loc[
+        sample_index,
+        [
+            'id',
+            'target_category',
+            'target_price',
+            'offered_category',
+            'offered_price',
+            'price_diff',
+            'user_swap_count',
+            'user_success_rate',
+            'category_success_rate',
+            'label'
+        ]
+    ]
+)
+
+print('\n模型预测成功概率：', y_prob[0])
+
 
 
 db.close()

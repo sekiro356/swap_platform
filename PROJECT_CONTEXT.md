@@ -1,1601 +1,1004 @@
-1. > # AI 智能以物换物平台 - PROJECT_CONTEXT
->
-   > > 项目名称：AI 智能以物换物平台
-   > > GitHub：`https://github.com/sekiro356/swap_platform.git`
-   > > 当前阶段：**FastAPI 后端 + 数据分析 + 机器学习数据构造**
-> > 开发原则：**不重新设计项目，按照当前结构逐步增加功能；一次完成一个小功能，并理解代码。**
-   >
-> ------
-   >
-> # 一、项目目标
-   >
-> 这是一个用于学习和简历展示的 **AI 智能以物换物平台**。
-   >
-> 基础目标：
-   >
-> ```text
-   > 用户注册
-   >    ↓
-   > 用户登录
->    ↓
-   > 发布物品
->    ↓
-   > 发起交换
-   >    ↓
-   > 接受 / 拒绝交换
->    ↓
-   > 记录交换结果
->    ↓
-   > 数据分析
-   >    ↓
-   > 机器学习预测交换成功概率
->    ↓
-   > 后续加入 Redis / RabbitMQ / LangChain / LangGraph / LLM
-> ```
-   >
-> 最终希望形成一个能够用于：
-   >
-> - 简历项目
-   > - 面试讲解
-> - FastAPI 后端开发练习
-   > - 数据分析练习
-   > - 机器学习练习
-   > - LangChain / LangGraph 实践
-   > - LLM 应用实践
-   >
-   > 的完整项目。
-   >
-   > ------
-   >
-   > # 二、当前技术栈
-   >
-   > ## 后端
-   >
-   > - Python
-   > - FastAPI
-> - Uvicorn
-   > - Pydantic
-> - SQLAlchemy
-   > - MySQL
-   >
-   > ## 用户认证
-   >
-   > - bcrypt
-   > - JWT
-   > - PyJWT
-   > - HTTPBearer
-   >
-   > ## 数据分析
-   >
-   > - NumPy
-   > - Pandas
-   > - Matplotlib
-   > - Seaborn
-   >
-   > ## 机器学习
->
-   > 计划使用：
->
-   > - scikit-learn
-> - Logistic Regression 等基础分类模型
-   > - One-Hot Encoding
-> - train_test_split
-   > - 模型评估
-   >
-   > ## 后续计划
-   >
-   > - Redis
-   > - RabbitMQ
-   > - Docker
-   > - Linux
-> - Nginx
-   > - LangChain
-> - LangGraph
-   > - pgvector
-> - LLM
-   > - 长期记忆
->
-   > ------
->
-   > # 三、当前项目结构
->
-   > 目前主要代码：
->
-   > ```text
-   > swap_platform/
-   > │
-   > ├── database.py
-   > ├── models.py
-   > ├── schemas.py
-   > ├── auth.py
-   > ├── main.py
-   > ├── analysis.py
-   > ├── .env
-> │
-   > └── data/
-> ```
-   >
-> 目前暂时没有强行拆分机器学习代码。
-   >
-   > 机器学习数据构造直接放在：
-   >
-> ```text
-   > analysis.py
-> ```
-   >
-> 原因：
-   >
-> `analysis.py` 已经完成：
-   >
-> ```text
-   > MySQL
-   >  ↓
-   > SQLAlchemy
-   >  ↓
-   > DataFrame
-   >  ↓
-   > 数据分析
-   > ```
-   >
-   > 所以当前阶段直接复用：
-   >
-   > ```python
-   > df_user
-> df_items
-   > df_swaps
-> ```
-   >
-> 继续构造 ML 数据最方便。
-   >
-> 后期项目成熟以后，再考虑拆分：
-   >
-> ```text
-   > analysis.py
-   > ml_data.py
-   > train_model.py
-   > predict.py
-   > ```
-   >
-> 目前**不重新设计**。
-   >
-> ------
-   >
-> # 四、数据库模型
-   >
-> ## users
-   >
-> ```text
-   > id
-   > username
-   > password
-   > ```
-   >
-   > 其中：
-   >
-   > ```text
-   > username UNIQUE
-   > password VARCHAR(255)
-   > ```
->
-   > 密码使用 bcrypt 哈希。
->
-   > ------
->
-   > ## items
->
-   > 主要字段：
->
-   > ```text
-> id
-   > name
-   > description
-   > category
-> price
-   > user_id
-> status
-   > ```
-   >
-   > 其中：
-   >
-   > ```text
-   > category
-   > ```
-   >
-   > 用于表示：
->
-   > ```text
-> 数码
-   > 图书
-   > 游戏
-   > 生活用品
-> ...
-   > ```
->
-   > ------
-   >
-   > ## swaps
->
-   > 主要字段：
->
-   > ```text
-   > id
-   > requester_id
-> target_item_id
-   > offered_item_id
-> status
-   > ```
->
-   > 含义：
->
-   > ```text
-> requester_id
-   >     发起交换的用户
-> 
-   > target_item_id
-   >     用户想要的物品
-   > 
-   > offered_item_id
-   >     用户拿出来交换的物品
-   > 
-> status
-   >     accepted / rejected 等
-> ```
-   >
-   > ------
-   >
-   > # 五、FastAPI 当前功能
-   >
-> 目前已经实现 / 测试过：
-   >
-> ```text
-   > GET  /
-   > GET  /test-db
-   > 
-   > POST /register
-   > POST /login
-   > GET  /me
-> 
-   > POST /items
-> 
-   > PUT /swaps/{swap_id}/accept
-   > ```
-   >
-   > 已经完成：
-   >
-   > - MySQL 连接
-> - SQLAlchemy
-   > - 用户注册
-> - bcrypt 密码哈希
-   > - 登录
-> - JWT
-   > - Bearer Token
-> - `/me` 用户认证
-   > - 发布物品
-   > - 交换申请
-   > - 接受交换
-   >
-   > Swagger：
-   >
-   > ```text
-   > /docs
-   > ```
-   >
-   > 已经进行过测试。
-   >
-   > ------
-   >
-   > # 六、测试数据
-   >
-   > 项目使用测试数据进行开发。
-   >
-   > 之前规划的中等规模：
-   >
-   > ```text
-   > 20 个用户
-   > 50 个物品
-   > 50 个交换记录
-   > ```
-   >
-   > 目前实际数据库中的交换数据曾经达到约 1500 条，用于机器学习特征构造。
-   >
-   > ------
->
-   > # 七、数据分析已经完成的内容
->
-   > `analysis.py` 已经实现：
->
-   > ## 1. MySQL → DataFrame
->
-   > ```python
-   > df_user
-   > df_items
-   > df_swaps
-   > ```
-   >
-   > 分别对应：
-   >
-   > ```text
-   > 用户表
-> 物品表
-   > 交换表
-> ```
-   >
-> ------
-   >
-> ## 2. 基础统计
-   >
-> 已经统计：
-   >
-> ```text
-   > 用户数量
-   > 物品数量
-   > 交换记录数量
-   > ```
-   >
-   > ------
-   >
-   > ## 3. 物品类别统计
->
-   > 使用：
->
-   > ```python
-   > df_items['category'].value_counts()
-   > ```
->
-   > 统计不同类别物品数量。
->
-   > ------
-   >
-   > ## 4. 用户发布物品数量
->
-   > 使用：
->
-   > ```python
-> df_items.groupby('user_id').size()
-   > ```
->
-   > 统计每个用户发布了多少物品。
-   >
-   > ------
-   >
-   > ## 5. 用户行为分析
-   >
-> 已经构造：
-   >
-> ```text
-   > item_count
-   > swap_count
-   > accepted_count
-   > success_rate
-   > ```
-   >
-   > 最终形成：
->
-   > ```text
-> user_behavior
-   > ```
->
-   > 用于分析：
->
-   > ```text
-> 用户
-   > 拥有物品数量
-   > 发起交换数量
-   > 成功交换数量
-   > 交换成功率
-   > ```
->
-   > ------
->
-   > # 八、数据可视化已经完成
->
-   > 已经绘制：
->
-   > ## 用户拥有物品数量
->
-   > ```text
-> 每个用户的物品数量
-   > ```
-   >
-   > ## 用户交换次数
-   >
-   > ```text
-   > 用户交换次数
-> ```
-   >
-> ## Top 10 用户
-   >
-> 比较：
-   >
-> ```text
-   > 物品数量
-> 交换次数
-   > ```
-   >
-   > 使用两个柱状图并排显示。
-   >
-   > ------
->
-   > ## 用户交换次数 + 成功率
->
-   > 使用：
-   >
-   > ```python
-   > ax1 = ...
-   > ax2 = ax1.twinx()
-   > ```
-   >
-   > 左 Y 轴：
-   >
-   > ```text
-   > 交换次数
-   > ```
-   >
-   > 右 Y 轴：
-   >
-> ```text
-   > 交换成功率
-> ```
-   >
-> 并使用：
-   >
-> ```python
-   > PercentFormatter(1)
-> ```
-   >
-   > 将：
-   >
-   > ```text
-   > 0.4
-   > ```
-   >
-   > 显示成：
-   >
-   > ```text
-   > 40%
-   > ```
-   >
-   > ------
-   >
-> ## 物品类别分布
-   >
-> 统计：
-   >
-> ```text
-   > 不同类别物品数量
-> ```
-   >
-> 并绘制柱状图。
-   >
-> ------
-   >
-> ## 不同类别交换次数
-   >
-> 已经将：
-   >
-   > ```text
-   > target_item_id
-   > ```
-   >
-   > 关联到：
-   >
-   > ```text
-   > category
-   > ```
-   >
-   > 统计不同类别发生交换的次数。
-   >
-   > ------
-   >
-   > ## 不同类别交换成功率
-   >
-> 已经统计：
-   >
-> ```text
-   > category_accept_count
-   > category_success_rate
-   > ```
-   >
-   > 并绘制成功率柱状图。
->
-   > ------
->
-   > # 九、数据分析中的一个重要问题：ID 与 NaN
->
-   > 在构造机器学习数据时曾经发现：
->
-   > ```text
-   > target_category    277 NaN
-   > target_price       277 NaN
-   > ```
-   >
-   > 原因是：
-   >
-   > ```text
-   > swaps.target_item_id
-> ```
-   >
-> 中存在一些 ID，在：
-   >
-   > ```text
-   > items.id
-   > ```
-   >
-   > 中找不到对应物品。
-   >
-> 使用：
-   >
-> ```python
-   > df_swaps[
->     ~df_swaps['target_item_id'].isin(df_items['id'])
-   > ]
-> ```
-   >
-   > 检查后发现确实存在大量孤立的物品 ID。
-   >
-   > 后来发现原因与测试数据重新生成有关：
-   >
-   > ```text
-   > 旧物品 ID：1 ~ 56
-   > 删除后重新插入物品
-   > 新物品 ID：57 ...
-   > ```
-   >
-   > MySQL 的：
-   >
-   > ```text
-   > AUTO_INCREMENT
-   > ```
-   >
-   > 不会因为删除数据自动从 1 重新开始。
-   >
-   > 因此旧的 swaps 仍然引用旧 item ID，导致：
-   >
-   > ```text
-   > swaps.target_item_id
-   >         ↓
-   > items.id 找不到
-   >         ↓
-   > LEFT JOIN
-   >         ↓
-   > NaN
-   > ```
-   >
-   > 已经解决测试数据一致性问题。
-   >
-   > 重要认识：
-   >
-   > > ID 从 57 开始本身并不是问题，真正的问题是外键引用必须对应存在的物品。
-   >
-   > 如果以后重新生成完整测试数据：
-   >
-   > ```text
-   > users
-> items
-   > swaps
-> ```
-   >
-   > 必须保证三者数据一致。
-   >
-   > ------
-   >
-   > # 十、当前机器学习目标
-   >
-   > 机器学习部分的目标已经确定：
-   >
-> > **预测某一个用户发起的一次具体交换请求最终成功的概率。**
-   >
-> 例如：
-   >
-> ```text
-   > 用户 A
-> 
-   > 目标物品：
-   > 数码产品
-   > 价格：500
-   > 
-   > 提供物品：
-   > 图书
-   > 价格：50
-   > 
-   > 用户历史成功率：
-   > 60%
-   > 
-   > 图书 → 数码
-   > 历史成功率：
-   > 35%
-   > 
-   > 价格比例：
-   > 50 / 500 = 0.1
-   > ```
-   >
-   > 模型最终可能预测：
-   >
-   > ```text
-   > 交换成功概率 = 18%
-   > ```
-   >
-   > ------
-   >
-   > # 十一、机器学习特征设计
-   >
-   > 最终计划使用：
-   >
-> ```text
-   > user_swap_count
-> user_accepted_count
-   > user_success_rate
-   > 
-   > target_price
-   > offered_price
-   > price_diff
-   > price_diff_abs
-   > price_ratio
-> 
-   > target_category
-> offered_category
-   > 
-   > category_swap_count
-   > category_success_rate
-   > 
-   > label
-> ```
-   >
-> ------
-   >
-> # 十二、数据泄漏是当前 ML 中的重要原则
-   >
-> 机器学习预测当前交换时：
-   >
-> ```text
-   > 只能使用当前交换发生之前的信息
-> ```
-   >
-   > 不能使用：
-   >
-> ```text
-   > 当前交换结果
-> 未来交换结果
-   > 未来统计数据
-   > ```
-   >
-   > 例如：
-   >
-   > 某用户最终：
-   >
-   > ```text
-   > 100 次交换
-   > 60 次成功
-   > ```
->
-   > 不能用：
->
-   > ```text
-> 100
-   > 60
-> 60%
-   > ```
-   >
-   > 去预测他的第 20 次交换。
->
-   > 因为第 20 次交换发生的时候：
->
-   > ```text
-   > 后面的 80 次交换
-   > ```
-   >
-   > 根本还没有发生。
-   >
-   > 这就是：
-   >
-   > ```text
-   > Data Leakage
-   > 数据泄漏
-   > ```
-   >
-> ------
-   >
-> # 十三、当前 ML 数据构造进度
-   >
-> 目前继续使用：
-   >
-> ```text
-   > analysis.py
-   > ```
-   >
-> 中的：
-   >
-> ```python
-   > df_user
-   > df_items
-   > df_swaps
-> ```
-   >
-> 不重新查询数据库。
-   >
-   > ------
-   >
-   > ## 第一步：加入目标物品信息
-   >
-   > 代码：
-   >
-   > ```python
-   > ml_data = df_swaps.merge(
-   >     df_items[['id', 'category', 'price']],
-   >     left_on='target_item_id',
->     right_on='id',
-   >     how='left'
-> )
-   > 
-> ml_data = ml_data.rename(
-   >     columns={
->         'category': 'target_category',
-   >         'price': 'target_price'
-   >     }
-   > )
-> 
-   > ml_data = ml_data.drop(columns='id')
-> ```
-   >
-> 得到：
-   >
-> ```text
-   > target_category
-> target_price
-   > ```
-   >
-   > ------
->
-   > # 十四、加入提供物品信息
->
-   > 继续：
-   >
-   > ```python
-   > ml_data = ml_data.merge(
-   >     df_items[['id', 'category', 'price']],
-   >     left_on='offered_item_id',
->     right_on='id',
-   >     how='left'
-> )
-   > 
-   > ml_data = ml_data.rename(
-   >     columns={
->         'category': 'offered_category',
-   >         'price': 'offered_price'
->     }
-   > )
-> 
-   > ml_data = ml_data.drop(columns='id')
-> ```
-   >
-> 得到：
-   >
-   > ```text
-   > offered_category
-   > offered_price
-   > ```
-   >
-   > ------
-   >
-   > # 十五、价格关系特征
-   >
-   > 已经完成：
-   >
-   > ```python
-   > ml_data['price_diff'] = (
->     ml_data['offered_price'] -
-   >     ml_data['target_price']
-> )
-   > 
-   > ml_data['price_diff_abs'] = (
-   >     ml_data['price_diff'].abs()
-   > )
-   > 
-   > ml_data['price_ratio'] = (
-   >     ml_data['offered_price'] /
-   >     ml_data['target_price']
-   > )
-   > ```
-   >
-   > 三个特征含义：
-   >
-   > ```text
-   > price_diff
-   > ```
->
-   > 有方向的价格差：
->
-   > ```text
-> 提供价格 - 目标价格
-   > ```
->
-   > 例如：
-   >
-   > ```text
-> 100 - 500 = -400
-   > ```
->
-   > 说明提供物品比目标物品便宜 400。
->
-   > ------
-   >
-   > ```text
-> price_diff_abs
-   > ```
->
-   > 绝对价格差：
-   >
-   > ```text
-> |-400| = 400
-   > ```
->
-   > 只表示价格差距，不表示方向。
->
-   > ------
->
-   > ```text
-> price_ratio
-   > ```
->
-   > 价格比例：
->
-   > ```text
-> offered_price / target_price
-   > ```
-   >
-   > 例如：
-   >
-   > ```text
-> 100 / 500 = 0.2
-   > ```
->
-   > 表示提供物品价格是目标物品的 20%。
->
-   > ------
-   >
-   > # 十六、用户历史行为特征
-   >
-   > 已经完成：
->
-   > ```text
-> user_swap_count
-   > user_accepted_count
-> user_success_rate
-   > ```
->
-   > ------
->
-   > ## user_swap_count
->
-   > 代码：
-   >
-   > ```python
-   > ml_data = ml_data.sort_values(
-   >     'id'
-   > ).reset_index(drop=True)
-> 
-   > ml_data['user_swap_count'] = (
->     ml_data.groupby('requester_id').cumcount()
-   > )
-> ```
-   >
-   > 含义：
-   >
-> > 当前交换发生之前，这个用户已经发起过多少次交换。
-   >
-> 例如：
-   >
-   > ```text
-   > 第1次交换 → 0
-> 第2次交换 → 1
-   > 第3次交换 → 2
-> 第4次交换 → 3
-   > ```
-   >
-   > ------
->
-   > ## sort_values
->
-   > ```python
-   > ml_data.sort_values('id')
-   > ```
-   >
-   > 按照：
-   >
-> ```text
-   > id
-> ```
-   >
-   > 从小到大排序。
-   >
-> 当前项目暂时使用自增：
-   >
-> ```text
-   > swap.id
-   > ```
-   >
-> 作为交换先后顺序。
-   >
-> ------
-   >
-> ## reset_index
-   >
-> ```python
-   > .reset_index(drop=True)
-> ```
-   >
-> 重新整理 DataFrame 行号：
-   >
-   > ```text
-   > 0
-   > 1
-   > 2
-   > 3
-   > ...
-   > ```
-   >
-   > `drop=True`：
-   >
-   > > 不保留旧行号。
-   >
-   > ------
-   >
-   > # 十七、user_accepted_count
-   >
-> 代码：
-   >
-> ```python
-   > ml_data['user_accepted_count'] = (
->     ml_data.groupby('requester_id')['status']
-   >     .transform(
->         lambda x:
-   >             x.eq('accepted')
-   >             .cumsum()
-   >             .shift(fill_value=0)
->     )
-   > )
-> ```
-   >
-   > 含义：
-   >
-> > 当前交换发生之前，该用户已经成功过多少次。
-   >
-> ------
-   >
-   > ## eq
-   >
-   > ```python
-> x.eq('accepted')
-   > ```
->
-   > 相当于：
->
-   > ```python
-   > x == 'accepted'
-   > ```
->
-   > 得到：
->
-   > ```text
-   > True
-   > False
-> True
-   > ```
->
-   > ------
-   >
-   > ## cumsum
-   >
-   > 累计求和。
-   >
-   > 例如：
-   >
-> ```text
-   > True
-> False
-   > True
-> True
-   > ```
-   >
-   > 相当于：
->
-   > ```text
-> 1
-   > 0
-   > 1
-   > 1
-> ```
-   >
-> 累计：
-   >
-   > ```text
-   > 1
-   > 1
-   > 2
-   > 3
-   > ```
->
-   > ------
->
-   > ## shift
->
-   > ```python
-> .shift()
-   > ```
-   >
-   > 将结果向下移动一行。
->
-   > 目的是：
->
-   > > 不使用当前交换的结果，只使用当前交换之前的历史结果。
->
-   > 例如：
-   >
-   > ```text
-> cumsum：
-   > 
-> 0
-   > 1
-> 2
-   > 2
-   > 
-   > shift：
-> 
-   > 0
-> 0
-   > 1
-> 2
-   > ```
-   >
-   > 所以：
->
-   > ```text
-> shift
-   > ```
-   >
-   > 本身并不等于“历史特征”。
-   >
-   > 准确理解是：
->
-   > > **把当前计算结果往后移动，让当前行只能看到上一条记录之前已经累计的数据，从而排除当前记录。**
->
-   > 这是防止数据泄漏的重要技巧。
->
-   > ------
->
-   > # 十八、transform
-   >
-   > ```python
-> groupby(...).transform(...)
-   > ```
->
-   > 作用：
->
-   > > 分组计算，但结果保持和原 DataFrame 一样的行数。
->
-   > 例如：
-   >
-   > ```text
-   > 原数据 1000 行
-   >         ↓
-   > groupby
-   >         ↓
-   > 每个用户单独计算
->         ↓
-   > transform
->         ↓
-   > 仍然返回 1000 行
-   > ```
-   >
-   > 这样计算出来的结果可以直接：
-   >
-   > ```python
-> ml_data['user_accepted_count'] = ...
-   > ```
->
-   > ------
-   >
-   > # 十九、lambda
->
-   > 例如：
->
-   > ```python
-   > lambda x: x + 1
-   > ```
->
-   > 可以理解成：
->
-   > ```python
-> def func(x):
-   >     return x + 1
-> ```
-   >
-   > 所以：
-   >
-> ```python
-   > transform(
->     lambda x:
-   >         x.eq('accepted')
-   >         .cumsum()
-   >         .shift(fill_value=0)
-   > )
-> ```
-   >
-> 本质上就是：
-   >
-   > > 对每一个用户的 status 数据执行这一套计算。
-   >
-   > ------
-   >
-> # 二十、user_success_rate
-   >
-> 已经完成：
-   >
-   > ```python
-   > ml_data['user_success_rate'] = (
-   >     ml_data['user_accepted_count'] /
->     ml_data['user_swap_count']
-   > )
-> 
-   > ml_data['user_success_rate'] = (
-   >     ml_data['user_success_rate'].fillna(0)
-   > )
-> ```
-   >
-> 公式：
-   >
-   > ```text
-   > 历史成功次数
-   > ──────────────
-   > 历史交换次数
-   > ```
->
-   > 第一次交换：
->
-   > ```text
-> 0 / 0
-   > ```
->
-   > 会产生：
-   >
-   > ```text
-> NaN
-   > ```
->
-   > 因此暂时：
-   >
-   > ```python
-   > .fillna(0)
-   > ```
-   >
-   > 处理。
-   >
-> ------
-   >
-> # 二十一、类别方向历史特征
-   >
-   > 现在已经完成：
-   >
-   > ```text
-   > category_swap_count
-   > category_accepted_count
-> category_success_rate
-   > ```
->
-   > ------
->
-   > ## category_swap_count
->
-   > 代码：
-   >
-   > ```python
-> ml_data['category_swap_count'] = (
-   >     ml_data
->     .groupby(
-   >         [
->             'target_category',
-   >             'offered_category'
-   >         ]
-   >     )
-   >     .cumcount()
-   > )
-   > ```
-   >
-> 含义：
-   >
-> > 当前交换发生之前，相同的“目标类别 → 提供类别”已经出现过多少次。
-   >
-   > 例如：
-   >
-> ```text
-   > 数码 → 图书
-> 数码 → 图书
-   > 数码 → 图书
-   > ```
-   >
-   > 对应：
-   >
-> ```text
-   > 0
-> 1
-   > 2
-> ```
-   >
-> ------
-   >
-   > # 二十二、category_accepted_count
-   >
-   > 代码：
->
-   > ```python
-> ml_data['category_accepted_count'] = (
-   >     ml_data
-   >     .groupby(
-   >         [
-   >             'target_category',
-   >             'offered_category'
->         ]
-   >     )['status']
->     .transform(
-   >         lambda x:
-   >             x.eq('accepted')
-   >             .cumsum()
-   >             .shift(fill_value=0)
-   >     )
-> )
-   > ```
->
-   > 含义：
-   >
-   > > 当前交换发生之前，这个类别交换方向已经成功过多少次。
-   >
-   > 例如：
->
-   > ```text
-> 数码 → 图书
-   > 
-> 第1次 accepted
-   > 第2次 rejected
-   > 第3次 accepted
-   > 第4次 当前交换
-   > ```
-   >
-   > 当前第4次看到：
->
-   > ```text
-> category_swap_count = 3
-   > category_accepted_count = 2
-> ```
-   >
-> 而不是把当前第4次的结果计算进去。
-   >
-> ------
-   >
-   > # 二十三、category_success_rate
-   >
-   > 代码：
-   >
-> ```python
-   > ml_data['category_success_rate'] = (
->     ml_data['category_accepted_count'] /
-   >     ml_data['category_swap_count']
-   > )
-   > 
-   > ml_data['category_success_rate'] = (
-   >     ml_data['category_success_rate'].fillna(0)
-   > )
-   > ```
-   >
-   > 公式：
->
-   > ```text
-> 类别方向历史成功次数
-   > ────────────────────
-   > 类别方向历史交换次数
-   > ```
-   >
-   > 例如：
-   >
-   > ```text
-> 图书 → 数码
-   > 
-> 历史交换 20 次
-   > 成功 7 次
-   > 
-   > category_success_rate
-   > = 7 / 20
-> = 35%
-   > ```
->
-   > ------
->
-   > # 二十四、label
->
-   > 已经完成：
->
-   > ```python
-> ml_data['label'] = (
-   >     ml_data['status'] == 'accepted'
-> ).astype(int)
-   > ```
->
-   > 转换：
->
-   > ```text
-> accepted → 1
-   > rejected → 0
-> ```
-   >
-> `label` 是机器学习中的：
-   >
-   > ```text
-   > 目标变量
-   > Target
-> ```
-   >
-> 模型需要学习：
-   >
-   > ```text
-   > 特征 X
-   >    ↓
-   > 模型
-   >    ↓
-> 预测 label / 成功概率
-   > ```
->
-   > ------
->
-   > # 二十五、目前 ml_data 的结构
-   >
-   > 目前大致已经形成：
-   >
-> ```text
-   > id
-> requester_id
-   > target_item_id
-> offered_item_id
-   > status
-> 
-   > target_category
-> target_price
-   > 
-> offered_category
-   > offered_price
-> 
-   > price_diff
-   > price_diff_abs
-   > price_ratio
-   > 
-> user_swap_count
-   > user_accepted_count
-> user_success_rate
-   > 
-> category_swap_count
-   > category_accepted_count
-> category_success_rate
-   > 
-   > label
-   > ```
-   >
-   > 其中：
-   >
-   > ```text
-> category_accepted_count
-   > ```
->
-   > 主要是为了计算：
-   >
-   > ```text
-   > category_success_rate
-   > ```
->
-   > 它暂时属于中间计算字段。
->
-   > ------
-   >
-   > # 二十六、下一步
->
-   > 当前已经完成：
->
-   > ```text
-   > MySQL
-   >  ↓
-> DataFrame
-   >  ↓
-> 数据分析
-   >  ↓
-   > 机器学习数据构造
-   >  ↓
-> 用户历史特征
-   >  ↓
-> 价格特征
-   >  ↓
-> 类别特征
-   >  ↓
-   > 历史类别成功率
-   >  ↓
-   > label
-> ```
-   >
-> 下一步正式进入：
-   >
-> # X 和 y
-   >
-> 需要把数据整理成：
-   >
-   > ```python
-   > X = 特征
-   > y = label
-> ```
-   >
-> 例如：
-   >
-> ```text
-   > X：
-> 
-   > user_swap_count
-> user_accepted_count
-   > user_success_rate
-   > target_price
-   > offered_price
-   > price_diff
-> price_diff_abs
-   > price_ratio
-> target_category
-   > offered_category
-   > category_swap_count
-   > category_success_rate
-   > y：
-   > 
-> label
-   > ```
->
-   > 然后进行：
-   >
-   > ```text
-> 类别特征 One-Hot Encoding
-   >         ↓
-> 训练集 / 测试集划分
-   >         ↓
-> 机器学习模型
-   >         ↓
-> 训练
-   >         ↓
-   > 准确率 / Precision / Recall 等评估
-   >         ↓
-> 预测某次交换成功概率
-   > ```
->
-   > ------
-   >
-   > # 二十七、One-Hot Encoding 计划
->
-   > 当前：
->
-   > ```text
-> target_category
-   > offered_category
-> ```
-   >
-   > 仍然是字符串。
-   >
-   > 例如：
-   >
-   > ```text
-   > target_category
-   > 数码
-   > 图书
-   > 游戏
-   > ```
-   >
-   > 不能直接拿给大多数 sklearn 模型。
-   >
-   > 后续使用：
-   >
-> ```text
-   > One-Hot Encoding
-> ```
-   >
-   > 例如：
-   >
-> ```text
-   > target_category_数码
-> target_category_图书
-   > target_category_游戏
-   > ```
-   >
-> 而不是简单：
-   >
-> ```text
-   > 数码 = 1
-> 图书 = 2
-   > 游戏 = 3
-> ```
-   >
-> 因为：
-   >
-> ```text
-   > 数码 > 图书 > 游戏
-> ```
-   >
-   > 这种数字大小关系本身没有实际意义。
-   >
-   > 后续正式训练时，优先考虑：
-   >
-   > ```python
-   > OneHotEncoder
-   > ColumnTransformer
-   > ```
-   >
-   > 避免训练集和测试集类别不一致的问题。
-   >
-   > ------
->
-   > # 二十八、当前开发原则
->
-   > 用户希望：
->
-   > - 一次只做一个小步骤
-> - 不一次性给整个项目代码
-   > - 每写一段代码解释一段
-> - 代码要结合当前项目
-   > - 遇到错误先解决错误
-> - 不重新设计现有项目
-   > - 尽量复用已经存在的 DataFrame
-> - 解释每个陌生函数
-   > - 适合整理进学习笔记
->
-   > 因此后续开发继续遵循：
-   >
-   > ```text
-> 一个功能
-   >  ↓
-> 写代码
-   >  ↓
-   > 运行
-   >  ↓
-> 检查结果
-   >  ↓
-> 解释
-   >  ↓
-> 下一步
-   > ```
->
-   > ------
->
-   > # 二十九、目前总体进度
-   >
-   > 大致可以理解为：
->
-   > ```text
-> 第一阶段：FastAPI 基础
-   > ████████████████████ 100%
-   > 
-   > 第二阶段：业务逻辑
-> ████████████████████ 100%
-   > 
-> 第三阶段：数据分析
-   > ████████████████████ 100%
-   > 
-   > 第四阶段：机器学习数据准备
-> ████████████████░░░░ 约 80%
-   > 
-> 第五阶段：模型训练
-   > ░░░░░░░░░░░░░░░░░░░░ 还未开始
-> 
-   > 第六阶段：模型接入 FastAPI
-   > ░░░░░░░░░░░░░░░░░░░░
-   > 
-> 第七阶段：Redis / RabbitMQ
-   > ░░░░░░░░░░░░░░░░░░░░
-> 
-   > 第八阶段：LangChain / LangGraph
-   > ░░░░░░░░░░░░░░░░░░░░
-   > 
-> 第九阶段：LLM / 智能推荐
-   > ░░░░░░░░░░░░░░░░░░░░
-> ```
-   >
-> **当前最准确的位置：**
-   >
-> > 正在完成第四阶段「机器学习数据准备」，下一步就是整理 `X` 和 `y`，然后进行类别 One-Hot 编码。
+对，你这个疑问是对的：**`class_weight='balanced'` 确实已经在处理类别不平衡了。**
+但关键是：
+
+> **类别不平衡只是问题之一，`class_weight='balanced'` 并不能让模型“变准确”。**
+
+你现在的模型效果不理想，**不一定主要是因为类别不平衡**。更大的问题很可能是：你的测试数据是人工构造的，而且“成功/失败”本身和现有特征之间没有特别强的规律。
+
+我先把这次完整的 `PROJECT_CONTEXT` 给你。
+
+# AI 智能以物换物平台 - PROJECT_CONTEXT
+
+## 1. 项目基本信息
+
+**项目名称：** AI 智能以物换物平台 `swap_platform`
+
+**GitHub：**
+`https://github.com/sekiro356/swap_platform.git`
+
+**项目目标：**
+
+开发一个可以用于简历、面试展示的 AI 智能以物换物平台。
+
+第一阶段以 FastAPI + MySQL 为基础，实现完整的物品交换业务；随后加入数据分析、机器学习、推荐、LLM、LangChain / LangGraph 等 AI 能力。
+
+项目周期目标约 **1～2个月完成一个可以运行和演示的版本**。
+
+------
+
+# 2. 当前技术栈
+
+### 后端
+
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+- SQLAlchemy
+- MySQL
+
+### 用户认证
+
+- bcrypt
+- JWT
+- PyJWT
+- HTTPBearer
+
+### 数据分析
+
+- Pandas
+- NumPy
+- Matplotlib
+- Seaborn
+
+### 当前机器学习
+
+- scikit-learn
+- train_test_split
+- StandardScaler
+- One-Hot Encoding
+- KNN
+- Logistic Regression
+- GridSearchCV
+- Precision / Recall / F1
+- ROC-AUC
+- PR-AUC
+
+### 后续计划
+
+- Redis
+- RabbitMQ
+- Docker
+- Linux
+- Nginx
+- LangChain
+- LangGraph
+- LLM
+- 推荐系统
+- 更完善的机器学习模型
+
+------
+
+# 3. 当前后端完成情况
+
+目前已经完成：
+
+```text
+FastAPI
+   ↓
+MySQL
+   ↓
+SQLAlchemy
+   ↓
+用户
+   ↓
+物品
+   ↓
+交换
+```
+
+主要文件：
+
+```text
+backend/
+├── main.py
+├── database.py
+├── models.py
+├── schemas.py
+├── auth.py
+├── routers/
+└── analysis.py
+```
+
+数据库：
+
+### users
+
+```text
+id
+username
+password
+```
+
+密码已经使用 bcrypt 哈希。
+
+### items
+
+```text
+id
+name
+description
+category
+price
+user_id
+status
+```
+
+### swaps
+
+```text
+id
+requester_id
+target_item_id
+offered_item_id
+status
+```
+
+------
+
+# 4. 用户认证已经完成
+
+已经完成：
+
+```text
+/register
+/login
+/me
+```
+
+JWT 登录认证已经完成。
+
+之前 JWT 完成后的 Git commit：
+
+```text
+ad3ccf7
+```
+
+Swagger `/docs` 中已经测试 `/me`。
+
+------
+
+# 5. 交换业务已经完成
+
+已经完成交换接受 / 拒绝相关逻辑。
+
+例如：
+
+```text
+PUT /swaps/{swap_id}/accept
+```
+
+可以处理交换接受。
+
+交换状态包括：
+
+```text
+pending
+accepted
+rejected
+```
+
+------
+
+# 6. 数据分析阶段已经完成
+
+已经完成：
+
+```text
+MySQL
+ ↓
+SQLAlchemy
+ ↓
+Pandas DataFrame
+ ↓
+数据分析
+ ↓
+Matplotlib 可视化
+```
+
+分析过：
+
+- 用户数量
+- 物品数量
+- 交换数量
+- 每个用户发布物品数量
+- 每个用户交换次数
+- 用户交换成功次数
+- 用户交换成功率
+- 物品类别分布
+- Top 用户
+- 交换成功率
+- 类别交换情况
+- 类别组合交换情况
+
+目前 `analysis.py` 同时承担数据分析和机器学习数据构造，不急着拆文件。
+
+------
+
+# 7. 当前机器学习真正目标
+
+机器学习的核心目标已经确定：
+
+> **预测一笔具体交换最终成功的概率。**
+
+例如：
+
+```text
+用户A
+
+目标物品：
+耳机
+价格：500
+
+提供物品：
+图书
+价格：50
+
+用户历史成功率：30%
+该类别组合历史成功率：20%
+
+        ↓
+
+机器学习模型
+
+        ↓
+
+预测成功概率：18%
+```
+
+最终希望把这个模型接入平台。
+
+------
+
+# 8. 当前机器学习数据
+
+目前构造了约：
+
+```text
+1500条交换数据
+```
+
+目标：
+
+```python
+y = ml_data['label']
+```
+
+其中：
+
+```text
+label = 1 → accepted
+label = 0 → rejected
+```
+
+也就是说：
+
+```text
+X = 交换的各种特征
+y = 最终交换是否成功
+```
+
+------
+
+# 9. 当前机器学习特征
+
+目前主要特征：
+
+```text
+user_swap_count
+user_accepted_count
+user_success_rate
+
+target_price
+offered_price
+
+price_diff
+price_diff_abs
+price_ratio
+
+target_category
+offered_category
+
+category_swap_count
+category_success_rate
+```
+
+其中：
+
+### 价格特征
+
+```python
+price_diff = offered_price - target_price
+price_diff_abs = abs(price_diff)
+price_ratio = offered_price / target_price
+```
+
+------
+
+# 10. 用户历史特征
+
+为了避免数据泄漏，使用了历史累计特征。
+
+例如：
+
+```python
+user_swap_count = groupby(...).cumcount()
+```
+
+表示：
+
+> 当前交换发生之前，这个用户已经有多少次交换。
+
+用户成功次数使用：
+
+```python
+cumsum().shift()
+```
+
+确保：
+
+> **当前交换的结果不会被用于预测当前交换。**
+
+然后：
+
+```python
+user_success_rate =
+user_accepted_count / user_swap_count
+```
+
+------
+
+# 11. 类别历史特征
+
+当前使用：
+
+```text
+target_category
++
+offered_category
+```
+
+形成方向：
+
+```text
+目标类别 → 提供类别
+```
+
+例如：
+
+```text
+数码 → 图书
+图书 → 数码
+数码 → 数码
+```
+
+然后计算历史：
+
+```text
+category_swap_count
+category_accepted_count
+category_success_rate
+```
+
+同样避免使用当前交换结果造成数据泄漏。
+
+------
+
+# 12. One-Hot Encoding
+
+当前 `X` 已经不是原始类别字符串。
+
+例如：
+
+```text
+target_category
+offered_category
+```
+
+已经转换成类似：
+
+```text
+target_category_数码
+target_category_图书
+offered_category_数码
+offered_category_运动
+...
+```
+
+所以当前：
+
+```text
+X.shape
+```
+
+为：
+
+```text
+(1500, 22)
+```
+
+即：
+
+```text
+1500条数据
+22个模型特征
+```
+
+------
+
+# 13. 第一版机器学习模型
+
+最开始尝试过 KNN。
+
+GridSearchCV：
+
+```python
+param_grid = {
+    'n_neighbors': range(1, 200)
+}
+```
+
+最终最佳 K：
+
+```text
+16
+```
+
+但是 KNN 存在严重问题：
+
+```text
+正类 Recall ≈ 0.03
+```
+
+也就是说：
+
+> 真正成功的交换，模型几乎都没有找出来。
+
+于是没有继续使用 KNN。
+
+------
+
+# 14. 当前模型：Logistic Regression
+
+现在使用：
+
+```python
+lr_model = LogisticRegression(
+    class_weight='balanced',
+    random_state=22
+)
+```
+
+其中：
+
+```python
+class_weight='balanced'
+```
+
+用于处理类别不平衡。
+
+------
+
+# 15. 当前数据划分
+
+当前使用：
+
+```python
+x_train, x_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    random_state=22,
+    test_size=0.2
+)
+```
+
+下一版建议增加：
+
+```python
+stratify=y
+```
+
+即：
+
+```python
+x_train, x_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    random_state=22,
+    test_size=0.2,
+    stratify=y
+)
+```
+
+保证训练集和测试集中的成功/失败比例更加接近。
+
+------
+
+# 16. 当前标准化
+
+当前：
+
+```python
+transformer = StandardScaler()
+
+x_train = transformer.fit_transform(x_train)
+x_test = transformer.transform(x_test)
+```
+
+已经明确：
+
+> One-Hot 特征不需要强行标准化。
+
+后续建议：
+
+```text
+数值特征
+ ↓
+StandardScaler
+
+One-Hot 特征
+ ↓
+保持 0/1
+```
+
+而不是全部 22 个特征无差别标准化。
+
+------
+
+# 17. 当前预测
+
+模型：
+
+```python
+lr_model.fit(x_train, y_train)
+```
+
+然后：
+
+```python
+y_prob = lr_model.predict_proba(x_test)[:, 1]
+```
+
+得到：
+
+> 每一笔交换预测为成功的概率。
+
+目前使用：
+
+```python
+threshold = 0.6
+```
+
+然后：
+
+```python
+lr_pred = (y_prob >= threshold).astype(int)
+```
+
+即：
+
+```text
+预测概率 >= 60%
+→ 预测成功
+
+预测概率 < 60%
+→ 预测失败
+```
+
+------
+
+# 18. 当前模型评价
+
+目前已经计算：
+
+```text
+Accuracy
+Precision
+Recall
+F1
+Confusion Matrix
+ROC-AUC
+PR-AUC
+```
+
+最近得到：
+
+```text
+ROC-AUC ≈ 0.8507
+PR-AUC ≈ 0.3436
+```
+
+目前不再继续疯狂调参数。
+
+原因：
+
+> 当前数据主要是人工构造数据，而且类别严重不平衡，继续调模型容易陷入“为了指标调指标”，偏离项目真正目标。
+
+------
+
+# 19. 当前模型概率分析
+
+已经绘制：
+
+```text
+实际失败交换的预测概率
+vs
+实际成功交换的预测概率
+```
+
+代码：
+
+```python
+y_prob[y_test == 0]
+```
+
+表示：
+
+> 测试集中真实失败的交换，它们的预测成功概率。
+
+而：
+
+```python
+y_prob[y_test == 1]
+```
+
+表示：
+
+> 测试集中真实成功的交换，它们的预测成功概率。
+
+用直方图观察：
+
+> 模型是否能够把成功和失败交换的概率分布区分开。
+
+------
+
+# 20. 最近实际预测的一笔交换
+
+测试集中的一笔交换：
+
+```text
+id：950
+
+目标类别：服装
+目标价格：500
+
+提供类别：数码
+提供价格：2070
+
+price_diff：1570
+
+user_swap_count：7
+
+user_success_rate：0.142857
+
+category_success_rate：0.21875
+
+真实 label：0
+```
+
+模型预测：
+
+```text
+success_probability：
+
+0.3479689526387992
+```
+
+即：
+
+```text
+≈ 34.8%
+```
+
+因为：
+
+```text
+34.8% < 60%
+```
+
+所以：
+
+```text
+predicted_label = 0
+```
+
+即模型预测：
+
+> 这笔交换成功概率较低，并预测为失败。
+
+而实际结果：
+
+```text
+label = 0
+```
+
+确实失败。
+
+------
+
+# 21. 当前阶段真正完成到哪里
+
+目前已经完成：
+
+```text
+数据分析
+   ↓
+特征工程
+   ↓
+X / y
+   ↓
+One-Hot
+   ↓
+训练集 / 测试集
+   ↓
+Logistic Regression
+   ↓
+预测概率
+   ↓
+模型评价
+   ↓
+单笔交换预测
+```
+
+所以：
+
+> **第一版机器学习模型已经跑通。**
+
+下一阶段不是继续堆模型指标。
+
+而是：
+
+```text
+训练好的模型
+      ↓
+封装预测函数
+      ↓
+输入一笔交换
+      ↓
+自动构造特征
+      ↓
+返回 success_probability
+      ↓
+接入 FastAPI
+```
+
+最终成为平台真正的 AI 功能。
+
+------
+
+# 22. 为什么 `class_weight='balanced'` 了，还是“不准”？
+
+这个问题非常重要。
+
+你说：
+
+> “数量少的权重已经更高了，按理来说应该没问题啊？”
+
+**不完全是。**
+
+`class_weight='balanced'` 做的事情是：
+
+> **告诉模型：别因为成功样本少，就完全忽略成功样本。**
+
+它不是：
+
+> **把成功样本变得更多。**
+
+更不是：
+
+> **让原本没有规律的数据突然产生规律。**
+
+举个极端例子。
+
+假设：
+
+```text
+1000笔交换
+```
+
+其中：
+
+```text
+失败：900
+成功：100
+```
+
+而且我们发现：
+
+```text
+成功/失败
+```
+
+跟目前这些特征几乎没有关系。
+
+例如：
+
+```text
+价格差
+用户历史成功率
+类别组合
+```
+
+成功和失败都乱七八糟。
+
+那么 Logistic Regression 就算给成功样本更高权重：
+
+```text
+成功样本权重 ↑
+```
+
+它也没有什么可靠规律可以学习。
+
+它只能：
+
+> **更加认真地寻找规律。**
+
+但如果数据本身没有明显规律，它还是找不到。
+
+------
+
+## 这就是你现在最可能的问题
+
+你现在的数据是我们自己构造出来的。
+
+所以真正值得怀疑的是：
+
+```text
+成功/失败
+     ↑
+到底是根据什么规则产生的？
+```
+
+如果你的测试数据大概是：
+
+```text
+随机生成用户
+随机生成物品
+随机生成交换
+随机决定 accepted / rejected
+```
+
+那么模型很难学好。
+
+因为：
+
+```text
+输入 X
+   ↓
+没有稳定规律
+   ↓
+label
+```
+
+模型当然预测不好。
+
+------
+
+## 还有一个很关键的问题：`class_weight` 不等于概率变准
+
+这一点你现在正好需要知道。
+
+你最终想要的是：
+
+```text
+成功概率 = 73%
+```
+
+但是：
+
+```python
+class_weight='balanced'
+```
+
+主要是为了让模型在**分类任务**里更加重视少数类。
+
+它改变的是训练时的损失权重。
+
+所以：
+
+> **用了 `balanced` 后，模型的分类能力可能改善，但 `predict_proba()` 得到的概率不一定就是现实世界中经过良好校准的“真实概率”。**
+
+也就是说：
+
+```text
+模型输出：
+0.73
+```
+
+不能简单理解成：
+
+> “现实中恰好有 73% 的概率成功。”
+
+这也是为什么我们现在先把它叫：
+
+> **模型预测成功概率**
+
+而不是说：
+
+> **绝对准确的真实成功概率。**
+
+------
+
+# 23. 所以现在不要因为指标不好就否定这个模型
+
+你现在这个阶段最重要的是：
+
+> **证明机器学习链路跑通。**
+
+而你现在已经证明了：
+
+```text
+一笔交换
+ ↓
+特征
+ ↓
+模型
+ ↓
+0~1之间的预测概率
+```
+
+这个闭环已经建立。
+
+以后如果换成真实平台积累的：
+
+```text
+10万笔交换
+100万笔交换
+```
+
+并且真实用户行为产生真实的：
+
+```text
+价格
+类别
+用户历史
+交换结果
+响应时间
+用户活跃度
+物品热度
+……
+```
+
+模型才有更多真实规律可以学习。
+
+------
+
+## 下一步
+
+所以我建议我们现在**不要再改 Logistic Regression**。
+
+下一步正式进入：
+
+> **“把训练好的模型封装成一个预测函数”**
+
+让它从：
+
+```python
+y_prob = lr_model.predict_proba(x_test)[:, 1]
+```
+
+这种只能对测试集预测的代码，
+
+变成：
+
+```python
+predict_swap(...)
+```
+
+能够对**一笔新的交换**进行预测。
+
+然后再接到 FastAPI。
+
+这才是从“我做了一个机器学习实验”变成：
+
+> **“我的物换物平台里真的有一个 AI 交换成功率预测功能。”**
