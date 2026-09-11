@@ -6,6 +6,7 @@ from matplotlib.ticker import PercentFormatter
 from models import User,Items,Swap
 from database import SessionLocal
 import matplotlib.pyplot as plt
+import joblib
 
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用黑体
 plt.rcParams['axes.unicode_minus'] = False    # 正常显示负号
@@ -409,241 +410,260 @@ print(
 # 主要使用的有：用户历史行为（用户过去交换多少次、交换次数、成功率）、价格关系特征（差价、价格比例（判断谁是高价方））、
 #             类别关系特征（类别交换次数、类别组合交换成功率）主要从三方面的数据进行训练模型进行预测
 
+def build_ml_features(df_swaps,df_items):
+    # 预测用户交换物品成功率
+    # 将目标物品信息加入交换记录
+    ml_data = df_swaps.merge(
+        df_items[['id','category','price']],
+        left_on='target_item_id',
+        right_on='id',
+        how='left'
+    )
 
-# 预测用户交换物品成功率
-# 将目标物品信息加入交换记录
-ml_data = df_swaps.merge(
-    df_items[['id','category','price']],
-    left_on='target_item_id',
-    right_on='id',
-    how='left'
-)
+    # 重命名目标物品信息
+    ml_data = ml_data.rename(
+        columns={
+            'category':'target_category',
+            'price':'target_price'
+        }
+    )
 
-# 重命名目标物品信息
-ml_data = ml_data.rename(
-    columns={
-        'category':'target_category',
-        'price':'target_price'
-    }
-)
+    # 删除多余的 id
+    ml_data = ml_data.drop(columns='id_y')
+    print('\n目标物品关联后的机器学习数据：\n')
+    print(ml_data.head(10))
 
-# 删除多余的 id
-ml_data = ml_data.drop(columns='id_y')
-print('\n目标物品关联后的机器学习数据：\n')
-print(ml_data.head(10))
+    # 将提供物品信息加入交换记录
+    ml_data = ml_data.merge(
+        df_items[['id','price','category']],
+        left_on='offered_item_id',
+        right_on='id',
+        how='left'
+    )
 
-# 将提供物品信息加入交换记录
-ml_data = ml_data.merge(
-    df_items[['id','price','category']],
-    left_on='offered_item_id',
-    right_on='id',
-    how='left'
-)
+    ml_data = ml_data.rename(
+        columns={
+            'category':'offered_category',
+            'price':'offered_price'
+        }
+    )
 
-ml_data = ml_data.rename(
-    columns={
-        'category':'offered_category',
-        'price':'offered_price'
-    }
-)
+    # 删除多余 id
+    ml_data = ml_data.drop(columns='id')
+    ml_data = ml_data.rename(columns={'id_x':'id'})
+    print('\n目标物品 + 提供物品信息：')
+    print(ml_data)
 
-# 删除多余 id
-ml_data = ml_data.drop(columns='id')
-ml_data = ml_data.rename(columns={'id_x':'id'})
-print('\n目标物品 + 提供物品信息：')
-print(ml_data)
+    # ml_data: id | requester_id | target_item_id | offered_item_id | target_price |target_category | offered_price | offered_category
 
-# ml_data: id | requester_id | target_item_id | offered_item_id | target_price |target_category | offered_price | offered_category
+    # 计算价格关系特征
+    # 有方向
+    ml_data['price_diff'] = (ml_data['offered_price'] - ml_data['target_price'])
 
-# 计算价格关系特征
-# 有方向
-ml_data['price_diff'] = (ml_data['offered_price'] - ml_data['target_price'])
+    ml_data['price_diff_abs'] = ml_data['price_diff'].abs()
 
-ml_data['price_diff_abs'] = ml_data['price_diff'].abs()
+    # 价格比例
+    ml_data['price_ratio'] = ml_data['offered_price'] / ml_data['target_price']
+    print('\n加入价格关系特征后：')
+    print(
+        ml_data[
+            [
+                'target_price',
+                'offered_price',
+                'price_diff',
+                'price_diff_abs',
+                'price_ratio'
+            ]
+        ]
+    )
 
-# 价格比例
-ml_data['price_ratio'] = ml_data['offered_price'] / ml_data['target_price']
-print('\n加入价格关系特征后：')
-print(
-    ml_data[
+    # 计算用户历史行为特征
+    # 只能使用当前之前交换的数据
+
+    # 按交换 id 排序，模拟交换发生的先后顺序
+    # drop=True：不要把旧的行号保留下来作为新的一列。
+    ml_data = ml_data.sort_values('id').reset_index(drop=True) # reset_index(drop=True)：使重新排列后行号不会变还是从0开始
+
+    # 当前交换之前，该用户已经发生了多少次交换
+    ml_data['user_swap_count'] = ml_data.groupby('requester_id').cumcount()
+    print('\n加入用户历史交换次数：')
+    print(
+        ml_data[
+            [
+                'id',
+                'requester_id',
+                'status',
+                'user_swap_count'
+            ]
+        ]
+    )
+
+    # 当前交换之前，已经成功进行了多少次交换：
+    # 按用户分组，然后取每个用户的 status 经过 x:(x.eq('accepted')) 会变成 True/False
+    # 再.cumsum()会累次成功次数
+    # .shift(fill_value = 0) ： 将 x 的计算结果向下移动
+    """
+    1     rejected    0
+    2     accepted    1
+    3     accepted    2
+    4     rejected    2
+    预测 id = 2 时 成功次数应该为 0 不应该用这次的1，让上面补0，然后下移，就不会让函数提前知道这次会成功，从而进行预测
+    id    shift后
+    1     0
+    2     0
+    3     1
+    4     2
+    """
+
+    # .transform ：将用户分为一组一组的
+    # lambda x: x + 10 等价于 def func(x):
+    #                           return x + 10
+    ml_data['user_accepted_count'] = (ml_data.groupby('requester_id')['status']
+                                      .transform(lambda x:(x.eq('accepted')).cumsum().shift(fill_value = 0)))
+
+    print('\n加入用户历史成功次数：')
+    print(
+        ml_data[
+            [
+                'id',
+                'requester_id',
+                'status',
+                'user_swap_count',
+                'user_accepted_count'
+            ]
+        ]
+    )
+
+    # 计算用户交换成功率
+    # 当前交换之前，用户历史成功率
+    ml_data['user_success_rate'] = ml_data['user_accepted_count'] / ml_data['user_swap_count']
+
+    # 第一次交换没有历史数据，成功概率为0
+    ml_data['user_success_rate'] = ml_data['user_success_rate'].fillna(0)
+    print('\n用户历史行为特征：')
+    print(
+        ml_data[
+            [
+                'id',
+                'requester_id',
+                'status',
+                'user_swap_count',
+                'user_accepted_count',
+                'user_success_rate'
+            ]
+        ]
+    )
+
+    # 计算类别交换方向的历史次数
+    ml_data['category_swap_count'] = ml_data.groupby(['target_category','offered_category']).cumcount()
+    print('\n加入类别方向历史交换次数：')
+    print(
+        ml_data[
+            [
+                'id',
+                'target_category',
+                'offered_category',
+                'status',
+                'category_swap_count'
+            ]
+        ]
+    )
+
+    # 计算类别交换方向的历史成功次数
+    ml_data['category_accepted_count'] = ml_data.groupby(['target_category','offered_category'])['status'].transform(
+        lambda x:x.eq('accepted').cumsum().shift(fill_value = 0)
+    )
+
+    # 计算交换成功率
+    ml_data['category_success_rate'] = ml_data['category_accepted_count'] / ml_data['category_swap_count']
+
+    # 第一次出现交换方向时没有历史数据
+    ml_data['category_success_rate'] = ml_data['category_success_rate'].fillna(0)
+    print('\n类别方向历史特征：')
+    print(
+        ml_data[
+            [
+                'id',
+                'target_category',
+                'offered_category',
+                'status',
+                'category_swap_count',
+                'category_accepted_count',
+                'category_success_rate'
+            ]
+        ]
+    )
+
+    # 将交换结果转换为机器学习标签(目标)
+    # accepted = 1，表示交换成功
+    # 其他状态 = 0，表示交换失败
+
+    # astype(int): 会将 bool 值转化为 0/1
+    ml_data['label'] = (ml_data['status'] == 'accepted').astype(int)
+    print('\n加入机器学习标签后：')
+    print(
+        ml_data[
+            [
+                'id',
+                'status',
+                'label'
+            ]
+        ]
+    )
+
+    return ml_data
+
+ml_data = build_ml_features(df_swaps,df_items)
+
+def build_xy(ml_data):
+    # 划分特质 X 和 目标 y
+
+    X = ml_data[
         [
+            'user_swap_count',
+            'user_accepted_count',
+            'user_success_rate',
+
             'target_price',
             'offered_price',
             'price_diff',
             'price_diff_abs',
-            'price_ratio'
-        ]
-    ]
-)
+            'price_ratio',
 
-# 计算用户历史行为特征
-# 只能使用当前之前交换的数据
-
-# 按交换 id 排序，模拟交换发生的先后顺序
-# drop=True：不要把旧的行号保留下来作为新的一列。
-ml_data = ml_data.sort_values('id').reset_index(drop=True) # reset_index(drop=True)：使重新排列后行号不会变还是从0开始
-
-# 当前交换之前，该用户已经发生了多少次交换
-ml_data['user_swap_count'] = ml_data.groupby('requester_id').cumcount()
-print('\n加入用户历史交换次数：')
-print(
-    ml_data[
-        [
-            'id',
-            'requester_id',
-            'status',
-            'user_swap_count'
-        ]
-    ]
-)
-
-# 当前交换之前，已经成功进行了多少次交换：
-# 按用户分组，然后取每个用户的 status 经过 x:(x.eq('accepted')) 会变成 True/False
-# 再.cumsum()会累次成功次数
-# .shift(fill_value = 0) ： 将 x 的计算结果向下移动
-"""
-1     rejected    0
-2     accepted    1
-3     accepted    2
-4     rejected    2
-预测 id = 2 时 成功次数应该为 0 不应该用这次的1，让上面补0，然后下移，就不会让函数提前知道这次会成功，从而进行预测
-id    shift后
-1     0
-2     0
-3     1
-4     2
-"""
-
-# .transform ：将用户分为一组一组的
-# lambda x: x + 10 等价于 def func(x):
-#                           return x + 10
-ml_data['user_accepted_count'] = (ml_data.groupby('requester_id')['status']
-                                  .transform(lambda x:(x.eq('accepted')).cumsum().shift(fill_value = 0)))
-
-print('\n加入用户历史成功次数：')
-print(
-    ml_data[
-        [
-            'id',
-            'requester_id',
-            'status',
-            'user_swap_count',
-            'user_accepted_count'
-        ]
-    ]
-)
-
-# 计算用户交换成功率
-# 当前交换之前，用户历史成功率
-ml_data['user_success_rate'] = ml_data['user_accepted_count'] / ml_data['user_swap_count']
-
-# 第一次交换没有历史数据，成功概率为0
-ml_data['user_success_rate'] = ml_data['user_success_rate'].fillna(0)
-print('\n用户历史行为特征：')
-print(
-    ml_data[
-        [
-            'id',
-            'requester_id',
-            'status',
-            'user_swap_count',
-            'user_accepted_count',
-            'user_success_rate'
-        ]
-    ]
-)
-
-# 计算类别交换方向的历史次数
-ml_data['category_swap_count'] = ml_data.groupby(['target_category','offered_category']).cumcount()
-print('\n加入类别方向历史交换次数：')
-print(
-    ml_data[
-        [
-            'id',
             'target_category',
             'offered_category',
-            'status',
-            'category_swap_count'
-        ]
-    ]
-)
 
-# 计算类别交换方向的历史成功次数
-ml_data['category_accepted_count'] = ml_data.groupby(['target_category','offered_category'])['status'].transform(
-    lambda x:x.eq('accepted').cumsum().shift(fill_value = 0)
-)
-
-# 计算交换成功率
-ml_data['category_success_rate'] = ml_data['category_accepted_count'] / ml_data['category_swap_count']
-
-# 第一次出现交换方向时没有历史数据
-ml_data['category_success_rate'] = ml_data['category_success_rate'].fillna(0)
-print('\n类别方向历史特征：')
-print(
-    ml_data[
-        [
-            'id',
-            'target_category',
-            'offered_category',
-            'status',
             'category_swap_count',
-            'category_accepted_count',
-            'category_success_rate'
+            'category_success_rate',
         ]
     ]
-)
 
-# 将交换结果转换为机器学习标签(目标)
-# accepted = 1，表示交换成功
-# 其他状态 = 0，表示交换失败
+    # y : 模型预测的目标值
+    y = ml_data['label']
 
-# astype(int): 会将 bool 值转化为 0/1
-ml_data['label'] = (ml_data['status'] == 'accepted').astype(int)
-print('\n加入机器学习标签后：')
-print(
-    ml_data[
-        [
-            'id',
-            'status',
-            'label'
-        ]
-    ]
-)
+    print('\n机器学习特征 X：')
+    print(X.info())
 
-# 划分特质 X 和 目标 y
+    print('\n目标 y：')
+    print(y)
 
-X = ml_data[
-    [
-        'user_swap_count',
-        'user_accepted_count',
-        'user_success_rate',
+    # one-hot 处理
+    X = pd.get_dummies(X,columns=['target_category','offered_category'],dtype=int)
+    print(X.info())
 
-        'target_price',
-        'offered_price',
-        'price_diff',
-        'price_diff_abs',
-        'price_ratio',
+    return X,y
 
-        'target_category',
-        'offered_category',
+X,y = build_xy(ml_data)
+feature_columns = X.columns.tolist()
+print('\n模型最终使用的特征：')
+print(feature_columns)
+joblib.dump(feature_columns, 'feature_columns.pkl')
 
-        'category_swap_count',
-        'category_success_rate',
-    ]
-]
+loaded_feature_columns = joblib.load('feature_columns.pkl')
 
-# y : 模型预测的目标值
-y = ml_data['label']
+print('\n特征列是否一致：')
+print(feature_columns == loaded_feature_columns)
 
-print('\n机器学习特征 X：')
-print(X.info())
-
-print('\n目标 y：')
-print(y)
-
-# one-hot 处理
-X = pd.get_dummies(X,columns=['target_category','offered_category'])
-print(X.info())
 
 
 from sklearn.neighbors import KNeighborsClassifier
@@ -652,29 +672,76 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score,classification_report,confusion_matrix,roc_auc_score,average_precision_score
 from sklearn.linear_model import LogisticRegression
 
-x_train,x_test,y_train,y_test = train_test_split(X,y,random_state=22,test_size=0.2,stratify=y)
+import joblib
 
-# 标准化
-transformer = StandardScaler()
-x_train = transformer.fit_transform(x_train)
-x_test = transformer.transform(x_test)
+# 将模型训练封装成函数，方便 FastAPI 调用
+def train_model(X,y):
 
-# KNN模型
-# 为啥不用KNN：数据存在明显的不平衡，逻辑回归可以提高少数样本的权重
-# （刚开始确实用 KNN ，并通过交叉验证得到最佳 K 值为 16 ， 但是正类的召回率只有 0.03，模型几乎吧所有样本都预测成了负类。
-#   进一步分析发现数据极度不平衡,用逻辑回归可以提高少数样本的权重，可以改善模型对成功交换样本的识别能力）
-# model = KNeighborsClassifier(n_neighbors=16)
+    x_train,x_test,y_train,y_test = train_test_split(X,y,random_state=22,test_size=0.2,stratify=y)
 
-# 逻辑回归
-# class_weight='balanced':让模型自动给样本少的更高的权重
-lr_model = LogisticRegression(class_weight='balanced',random_state=22)
+    # 标准化
+    transformer = StandardScaler()
+    x_train = transformer.fit_transform(x_train)
+    x_test = transformer.transform(x_test)
 
-lr_model.fit(x_train,y_train)
-# lr_pred = lr_model.predict(x_test)
+    # KNN模型
+    # 为啥不用KNN：数据存在明显的不平衡，逻辑回归可以提高少数样本的权重
+    # （刚开始确实用 KNN ，并通过交叉验证得到最佳 K 值为 16 ， 但是正类的召回率只有 0.03，模型几乎吧所有样本都预测成了负类。
+    #   进一步分析发现数据极度不平衡,用逻辑回归可以提高少数样本的权重，可以改善模型对成功交换样本的识别能力）
+    # model = KNeighborsClassifier(n_neighbors=16)
 
+    # 逻辑回归
+    # class_weight='balanced':让模型自动给样本少的更高的权重
+    lr_model = LogisticRegression(class_weight='balanced',random_state=22)
+
+    lr_model.fit(x_train,y_train)
+    # lr_pred = lr_model.predict(x_test)
+
+    return lr_model,transformer,x_train,x_test,y_train,y_test
+
+lr_model,transformer,x_train,x_test,y_train,y_test = train_model(X,y)
+
+# =========================保存模型和标准化器，以便FastAPI调用时不用每次都重新训练模型===========================================
+
+# 保存训练好的模型
+joblib.dump(lr_model, 'lr_model.pkl')
+
+# 保存模型训练时使用的标准化器
+joblib.dump(transformer, 'scaler.pkl')
+
+# ======================================================================================================================
+
+# 加载保存的模型和标准化器
+loaded_model = joblib.load('lr_model.pkl')
+loaded_scaler = joblib.load('scaler.pkl')
+
+# 对比加载的模型和实际模型看看保存的模型是否正确
+
+import numpy as np
 # 获取预测为 1 的概率
 # 问模型对于测试集中的每一条交换，成功率是多少
 y_prob = lr_model.predict_proba(x_test)[:,1]
+
+
+# 加载后的模型的预测
+loaded_prob = loaded_model.predict_proba(x_test)[:,1]
+print("模型预测概率是否一致：", np.allclose(y_prob, loaded_prob))
+
+print("原模型前5个预测概率：")
+print(y_prob[:5])
+
+print("加载模型前5个预测概率：")
+print(loaded_prob[:5])
+
+print(
+    "Scaler mean 是否一致：",
+    np.allclose(transformer.mean_, loaded_scaler.mean_)
+)
+
+print(
+    "Scaler scale 是否一致：",
+    np.allclose(transformer.scale_, loaded_scaler.scale_)
+)
 
 # 设置分类阈值
 # 成功率大于阈值的预测为1，小于阈值的预测为0
@@ -820,9 +887,7 @@ print(
 print('\n模型预测成功概率：', y_prob[0])
 
 
-
 db.close()
-
 
 
 
